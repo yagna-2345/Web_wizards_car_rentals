@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-ytlm6o_(wng7!8g1ogex=)sqp71lj!pox$8-^6j7vz54wq3v7x
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -48,6 +48,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
 ]
 
 ROOT_URLCONF = 'web_wizards_rentals.urls'
@@ -143,3 +144,9 @@ EMAIL_USE_TLS = True                               # Keep TLS enabled
 EMAIL_HOST_USER = 'vu.241fa04450@gmail.com'           # Replace with your actual email address
 EMAIL_HOST_PASSWORD = 'kmzwmicdzudfpjab'          # Replace with your Google App Password (16-character code)
 DEFAULT_FROM_EMAIL = 'Web Wizards Car Rentals <vu.241fa04450@gmail.com>'
+
+
+
+
+
+STATIC_ROOT = BASE_DIR / 'staticfiles'
