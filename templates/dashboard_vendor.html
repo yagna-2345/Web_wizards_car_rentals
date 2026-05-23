@@ -1,0 +1,309 @@
+{% extends 'base.html' %}
+
+{% block title %}Vendor Dashboard - Web Wizards Car Rentals{% endblock %}
+
+{% block content %}
+<div class="container" style="padding: 40px 0;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:40px;">
+        <div>
+            <h2 style="font-size:2.2rem; font-weight:700; margin-bottom:10px;">Welcome, <span>{% if request.user.first_name %}{{ request.user.first_name }}{% else %}{{ request.user.username }}{% endif %}</span>!</h2>
+            <p style="color:var(--text-muted); margin-bottom:0;">Vendor Console — List your fleet, accept rental orders, and monitor your earnings.</p>
+        </div>
+        <a href="{% url 'edit_profile' %}" class="btn btn-secondary btn-sm" style="display:flex; align-items:center; gap:8px; text-decoration:none;">
+            <i class="fa-solid fa-user-pen"></i> Edit Profile
+        </a>
+    </div>
+
+    <!-- Verification status alert -->
+    {% if not vendor_profile.is_approved %}
+        <div style="background:var(--warning-glow); border:1px solid rgba(245,158,11,0.3); border-radius:12px; padding:20px; margin-bottom:40px; display:flex; align-items:center; gap:20px;">
+            <div style="font-size:2.5rem; color:var(--warning);"><i class="fa-solid fa-triangle-exclamation"></i></div>
+            <div>
+                <h4 style="color:var(--warning); font-size:1.1rem; font-weight:700; margin-bottom:5px;">Vendor Verification Pending</h4>
+                <p style="color:var(--text-muted); font-size:0.95rem;">Our administration team is currently reviewing your registration documents. You can upload car profiles now, but they will not show up in searches, and bookings cannot be approved until your supplier profile is approved.</p>
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- Stats row -->
+    <div class="stats-grid">
+        <div class="glass-card stat-card">
+            <div class="stat-info">
+                <h4>Total Listed Vehicles</h4>
+                <p>{{ cars.count }}</p>
+            </div>
+            <i class="fa-solid fa-car stat-icon"></i>
+        </div>
+        <div class="glass-card stat-card">
+            <div class="stat-info">
+                <h4>Pending Bookings</h4>
+                <p>{{ pending_bookings_count }}</p>
+            </div>
+            <i class="fa-solid fa-clock stat-icon"></i>
+        </div>
+        <div class="glass-card stat-card">
+            <div class="stat-info">
+                <h4>Total Earnings</h4>
+                <p>${{ total_earnings }}</p>
+            </div>
+            <i class="fa-solid fa-circle-dollar-to-slot stat-icon"></i>
+        </div>
+    </div>
+
+    <div class="dashboard-container" style="grid-template-columns: 1fr 450px;">
+        <!-- Left Section: Listed Cars Directory & Booking Requests -->
+        <div style="display:flex; flex-direction:column; gap:40px;">
+            
+            <!-- Booking Requests -->
+            <div class="glass-card">
+                <h3 style="font-size:1.25rem; font-weight:700; border-bottom:1px solid var(--border-color); padding-bottom:12px; margin-bottom:20px;">
+                    <i class="fa-solid fa-calendar-check"></i> Booking Requests
+                </h3>
+                <div class="table-responsive">
+                    <table class="custom-table">
+                        <thead>
+                            <tr>
+                                <th>Car Details</th>
+                                <th>Customer</th>
+                                <th>Rent Dates</th>
+                                <th>Earnings</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for booking in bookings %}
+                                <tr>
+                                    <td style="font-weight:600;">{{ booking.car.brand }} {{ booking.car.model }}</td>
+                                    <td style="font-size:0.9rem;">
+                                        {{ booking.customer.username }}
+                                        <span style="display:block; color:var(--text-muted); font-size:0.75rem;">Ph: {{ booking.customer.phone_number }}</span>
+                                    </td>
+                                    <td style="font-size:0.9rem;">
+                                        {{ booking.start_date }} <span style="color:var(--text-muted);">to</span> {{ booking.end_date }}
+                                    </td>
+                                    <td style="font-weight:600; color:var(--success);">${{ booking.total_price }}</td>
+                                    <td>
+                                        {% if booking.status == 'PENDING' %}
+                                            <span class="badge badge-pending">Requested</span>
+                                        {% elif booking.status == 'APPROVED' %}
+                                            <span class="badge badge-approved">Approved</span>
+                                        {% elif booking.status == 'REJECTED' %}
+                                            <span class="badge badge-rejected">Rejected</span>
+                                        {% elif booking.status == 'COMPLETED' %}
+                                            <span class="badge badge-approved" style="background:rgba(16,185,129,0.15);">Completed</span>
+                                        {% elif booking.status == 'CANCELLED' %}
+                                            <span class="badge badge-cancelled">Cancelled</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if booking.status == 'PENDING' %}
+                                            {% if vendor_profile.is_approved %}
+                                                <div style="display:flex; gap:8px;">
+                                                    <form method="POST" action="{% url 'approve_booking' booking.id %}">
+                                                        {% csrf_token %}
+                                                        <button type="submit" class="btn btn-primary btn-sm" style="padding:4px 8px; font-size:0.75rem;">Accept</button>
+                                                    </form>
+                                                    <form method="POST" action="{% url 'reject_booking' booking.id %}">
+                                                        {% csrf_token %}
+                                                        <button type="submit" class="btn btn-danger btn-sm" style="padding:4px 8px; font-size:0.75rem;">Reject</button>
+                                                    </form>
+                                                </div>
+                                            {% else %}
+                                                <span style="font-size:0.8rem; color:var(--text-muted);">Approval Req.</span>
+                                            {% endif %}
+                                        {% elif booking.status == 'APPROVED' and booking.payment_status == 'PAID' %}
+                                            <form method="POST" action="{% url 'return_car' booking.id %}">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-secondary btn-sm" style="padding:4px 8px; font-size:0.75rem; background:var(--success); color:white; border-color:var(--success);" onclick="return confirm('Confirm vehicle return hand-over and release availability?')">
+                                                    <i class="fa-solid fa-key"></i> Mark Returned
+                                                </button>
+                                            </form>
+                                        {% else %}
+                                            <span style="font-size:0.85rem; color:var(--text-muted);">None</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="6" style="text-align:center; color:var(--text-muted); padding:20px;">
+                                        No bookings requested or active.
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Fleet List -->
+            <div class="glass-card">
+                <h3 style="font-size:1.25rem; font-weight:700; border-bottom:1px solid var(--border-color); padding-bottom:12px; margin-bottom:20px;">
+                    <i class="fa-solid fa-list"></i> Your Vehicle Fleet
+                </h3>
+                <div class="table-responsive">
+                    <table class="custom-table">
+                        <thead>
+                            <tr>
+                                <th>Car Details</th>
+                                <th>Daily Rate</th>
+                                <th>Location</th>
+                                <th>Verif. Status</th>
+                                <th>Available</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for car in cars %}
+                                <tr>
+                                    <td>
+                                        <div style="display:flex; align-items:center; gap:12px;">
+                                            {% if car.image %}
+                                                <img src="{{ car.image.url }}" alt="" style="width:50px; height:35px; object-fit:cover; border-radius:4px;">
+                                            {% endif %}
+                                            <div>
+                                                <span style="font-weight:600; display:block;">{{ car.brand }} {{ car.model }}</span>
+                                                <span style="color:var(--text-muted); font-size:0.75rem;">{{ car.get_category_display }} | {{ car.year }}</span>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td style="font-weight:600;">${{ car.daily_rate }}/day</td>
+                                    <td>{{ car.location }}</td>
+                                    <td>
+                                        {% if car.status == 'PENDING' %}
+                                            <span class="badge badge-pending">Pending Admin</span>
+                                        {% elif car.status == 'APPROVED' %}
+                                            <span class="badge badge-approved">Listed</span>
+                                        {% elif car.status == 'REJECTED' %}
+                                            <span class="badge badge-rejected">Rejected</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if car.is_available %}
+                                            <span style="color:var(--success); font-weight:600;"><i class="fa-solid fa-check"></i> Yes</span>
+                                        {% else %}
+                                            <span style="color:var(--danger); font-weight:600;"><i class="fa-solid fa-x"></i> Rented</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div style="display:flex; gap:6px;">
+                                            <a href="{% url 'toggle_car_availability' car.id %}" class="btn btn-secondary btn-sm" style="font-size: 0.75rem; padding: 4px 8px;" title="Toggle Availability">
+                                                <i class="fa-solid fa-power-off"></i>
+                                            </a>
+                                            <a href="{% url 'edit_car' car.id %}" class="btn btn-primary btn-sm" style="font-size: 0.75rem; padding: 4px 8px; background:var(--primary);" title="Edit Vehicle">
+                                                <i class="fa-solid fa-edit"></i>
+                                            </a>
+                                            <form method="POST" action="{% url 'delete_car' car.id %}" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this car?');">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-danger btn-sm" style="font-size: 0.75rem; padding: 4px 8px;" title="Delete Vehicle">
+                                                    <i class="fa-solid fa-trash"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="6" style="text-align:center; color:var(--text-muted); padding:20px;">
+                                        You haven't listed any cars yet.
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Right Section: Add Car Form -->
+        <div>
+            <div class="glass-card" style="position: sticky; top: 110px;">
+                <h3 style="font-size:1.25rem; font-weight:700; border-bottom:1px solid var(--border-color); padding-bottom:12px; margin-bottom:20px;">
+                    <i class="fa-solid fa-circle-plus"></i> List New Car
+                </h3>
+                <form method="POST" action="{% url 'add_car' %}" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
+                        <div class="form-group">
+                            <label for="brand">Brand / Make</label>
+                            <input type="text" id="brand" name="brand" class="form-control" placeholder="e.g. Tesla" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="model">Model</label>
+                            <input type="text" id="model" name="model" class="form-control" placeholder="e.g. Model 3" required>
+                        </div>
+                    </div>
+
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
+                        <div class="form-group">
+                            <label for="year">Year</label>
+                            <input type="number" id="year" name="year" class="form-control" placeholder="2024" min="1900" max="2027" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="category">Category</label>
+                            <select id="category" name="category" class="form-control" required>
+                                <option value="SEDAN">Sedan</option>
+                                <option value="SUV">SUV</option>
+                                <option value="LUXURY">Luxury</option>
+                                <option value="ELECTRIC">Electric</option>
+                                <option value="SPORTS">Sports</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
+                        <div class="form-group">
+                            <label for="transmission">Transmission</label>
+                            <select id="transmission" name="transmission" class="form-control" required>
+                                <option value="AUTO">Automatic</option>
+                                <option value="MANUAL">Manual</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="fuel_type">Fuel Type</label>
+                            <select id="fuel_type" name="fuel_type" class="form-control" required>
+                                <option value="PETROL">Petrol</option>
+                                <option value="DIESEL">Diesel</option>
+                                <option value="ELECTRIC">Electric</option>
+                                <option value="HYBRID">Hybrid</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
+                        <div class="form-group">
+                            <label for="seats">Seats</label>
+                            <input type="number" id="seats" name="seats" class="form-control" value="5" min="1" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="daily_rate">Daily Rate ($)</label>
+                            <input type="number" id="daily_rate" name="daily_rate" class="form-control" placeholder="99.00" step="0.01" min="0" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="location">Location</label>
+                        <input type="text" id="location" name="location" class="form-control" placeholder="e.g. Brooklyn, NY" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="images">Car Photos (Select multiple)</label>
+                        <input type="file" id="images" name="images" class="form-control" accept="image/*" multiple required style="padding: 7px 10px;">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="document">Registration/Insurance PDF</label>
+                        <input type="file" id="document" name="document" class="form-control" accept=".pdf,.doc,.docx" required style="padding: 7px 10px;">
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" style="width:100%; height:46px; margin-top:10px;">
+                        <i class="fa-solid fa-arrow-up-from-bracket"></i> Upload Car Listing
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

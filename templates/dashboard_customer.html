@@ -1,0 +1,237 @@
+{% extends 'base.html' %}
+
+{% block title %}Customer Dashboard - Web Wizards Car Rentals{% endblock %}
+
+{% block content %}
+<div class="container" style="padding: 40px 0;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:40px;">
+        <div>
+            <h2 style="font-size:2.2rem; font-weight:700; margin-bottom:10px;">Welcome, <span>{% if request.user.first_name %}{{ request.user.first_name }}{% else %}{{ request.user.username }}{% endif %}</span>!</h2>
+            <p style="color:var(--text-muted); margin-bottom:0;">Customer Dashboard — Manage your active rentals, booking history, and support requests.</p>
+        </div>
+        <a href="{% url 'edit_profile' %}" class="btn btn-secondary btn-sm" style="display:flex; align-items:center; gap:8px; text-decoration:none;">
+            <i class="fa-solid fa-user-pen"></i> Edit Profile
+        </a>
+    </div>
+
+    <!-- Stats Row -->
+    <div class="stats-grid">
+        <div class="glass-card stat-card">
+            <div class="stat-info">
+                <h4>Active Bookings</h4>
+                <p>{{ active_bookings_count }}</p>
+            </div>
+            <i class="fa-solid fa-key stat-icon"></i>
+        </div>
+        <div class="glass-card stat-card">
+            <div class="stat-info">
+                <h4>Total Rentals</h4>
+                <p>{{ total_bookings_count }}</p>
+            </div>
+            <i class="fa-solid fa-history stat-icon"></i>
+        </div>
+        <div class="glass-card stat-card">
+            <div class="stat-info">
+                <h4>Total Spent</h4>
+                <p>${{ total_spent }}</p>
+            </div>
+            <i class="fa-solid fa-wallet stat-icon"></i>
+        </div>
+    </div>
+
+    <div class="dashboard-container" style="grid-template-columns: 1fr 350px;">
+        <!-- Left: Rental History -->
+        <div class="glass-card">
+            <h3 style="font-size:1.25rem; font-weight:700; border-bottom:1px solid var(--border-color); padding-bottom:12px; margin-bottom:20px;">
+                <i class="fa-solid fa-car-side"></i> Rental History & Bookings
+            </h3>
+            
+            <div class="table-responsive">
+                <table class="custom-table">
+                    <thead>
+                        <tr>
+                            <th>Car</th>
+                            <th>Dates</th>
+                            <th>Amount</th>
+                            <th>Booking Status</th>
+                            <th>Payment</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for booking in bookings %}
+                            <tr>
+                                <td style="font-weight:600;">
+                                    {{ booking.car.brand }} {{ booking.car.model }}
+                                    <span style="display:block; font-size:0.8rem; font-weight:400; color:var(--text-muted);">
+                                        Vendor: {{ booking.car.vendor.username }}
+                                    </span>
+                                </td>
+                                <td style="font-size:0.9rem;">
+                                    {{ booking.start_date }} <br>
+                                    <span style="color:var(--text-muted);">to</span> {{ booking.end_date }}
+                                </td>
+                                <td style="font-weight:600; color:var(--primary);">${{ booking.total_price }}</td>
+                                <td>
+                                    {% if booking.status == 'PENDING' %}
+                                        <span class="badge badge-pending">Pending Vendor</span>
+                                    {% elif booking.status == 'APPROVED' %}
+                                        <span class="badge badge-approved">Approved</span>
+                                    {% elif booking.status == 'REJECTED' %}
+                                        <span class="badge badge-rejected">Rejected</span>
+                                    {% elif booking.status == 'COMPLETED' %}
+                                        <span class="badge badge-approved" style="background:rgba(16, 185, 129, 0.15);">Completed</span>
+                                    {% elif booking.status == 'CANCELLED' %}
+                                        <span class="badge badge-cancelled">Cancelled</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if booking.payment_status == 'PENDING' %}
+                                        <span class="badge badge-pending">Unpaid</span>
+                                    {% elif booking.payment_status == 'PAID' %}
+                                        <span class="badge badge-approved">Paid</span>
+                                    {% elif booking.payment_status == 'REFUNDED' %}
+                                        <span class="badge badge-rejected">Refunded</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div style="display:flex; flex-direction:column; gap:6px; align-items:start; min-width:110px;">
+                                        {% if booking.status == 'APPROVED' and booking.payment_status == 'PENDING' %}
+                                            <a href="{% url 'payment_checkout' booking.id %}" class="btn btn-accent btn-sm" style="width:100%; text-align:center;">
+                                                <i class="fa-solid fa-credit-card"></i> Pay Now
+                                            </a>
+                                        {% elif booking.status == 'APPROVED' and booking.payment_status == 'PAID' %}
+                                            <span style="color:var(--success); font-weight:600; font-size:0.85rem;"><i class="fa-solid fa-key"></i> Active Rental</span>
+                                        {% elif booking.status == 'COMPLETED' %}
+                                            <!-- Review Form Trigger -->
+                                            <button onclick="openReviewModal('{{ booking.car.id }}', '{{ booking.car.brand }} {{ booking.car.model }}')" class="btn btn-secondary btn-sm" style="width:100%;">
+                                                <i class="fa-solid fa-star"></i> Review
+                                            </button>
+                                        {% elif booking.status == 'CANCELLED' %}
+                                            <span style="color:var(--text-muted); font-size:0.85rem;">Cancelled</span>
+                                        {% elif booking.status == 'REJECTED' %}
+                                            <span style="color:var(--text-muted); font-size:0.85rem;">Rejected</span>
+                                        {% else %}
+                                            <span style="color:var(--text-muted); font-size:0.85rem;">Pending Approval</span>
+                                        {% endif %}
+
+                                        {% if booking.can_cancel %}
+                                            <form method="POST" action="{% url 'cancel_booking' booking.id %}" style="display:inline; width:100%;" onsubmit="return confirm('Are you sure you want to cancel this booking? If you have paid, a simulated refund will be issued to your card.');">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-danger btn-sm" style="font-size:0.75rem; padding:4px 8px; width:100%; display:flex; align-items:center; justify-content:center; gap:4px;">
+                                                    <i class="fa-solid fa-ban"></i> Cancel
+                                                </button>
+                                            </form>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="6" style="text-align:center; color:var(--text-muted); padding:30px;">
+                                    You haven't booked any rentals yet.
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Right: Raise Support/Complaint Form & Complaint List -->
+        <div style="display:flex; flex-direction:column; gap:30px;">
+            <!-- Raise Complaint Form -->
+            <div class="glass-card">
+                <h3 style="font-size:1.15rem; font-weight:700; border-bottom:1px solid var(--border-color); padding-bottom:10px; margin-bottom:20px;">
+                    <i class="fa-solid fa-circle-question"></i> Raise Dispute/Complaint
+                </h3>
+                <form method="POST" action="{% url 'raise_complaint' %}">
+                    {% csrf_token %}
+                    <div class="form-group">
+                        <label for="subject">Subject</label>
+                        <input type="text" id="subject" name="subject" class="form-control" placeholder="e.g. Car issue, deposit dispute" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="description">Detailed Description</label>
+                        <textarea id="description" name="description" class="form-control" placeholder="Explain the problem here..." required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width:100%;">
+                        Submit Ticket
+                    </button>
+                </form>
+            </div>
+
+            <!-- Complaints Status list -->
+            <div class="glass-card">
+                <h3 style="font-size:1.15rem; font-weight:700; border-bottom:1px solid var(--border-color); padding-bottom:10px; margin-bottom:20px;">
+                    Your Complaints
+                </h3>
+                <div style="max-height: 250px; overflow-y:auto; display:flex; flex-direction:column; gap:15px;">
+                    {% for complaint in complaints %}
+                        <div style="background:rgba(255,255,255,0.02); border:1px solid var(--border-color); border-radius:8px; padding:12px 15px;">
+                            <div style="display:flex; justify-content:between; align-items:center; margin-bottom:6px;">
+                                <span style="font-weight:600; font-size:0.9rem;">{{ complaint.subject }}</span>
+                                {% if complaint.status == 'PENDING' %}
+                                    <span class="badge badge-pending" style="font-size:0.65rem;">Pending</span>
+                                {% else %}
+                                    <span class="badge badge-approved" style="font-size:0.65rem;">Resolved</span>
+                                {% endif %}
+                            </div>
+                            <p style="color:var(--text-muted); font-size:0.85rem;">{{ complaint.description }}</p>
+                            <span style="font-size:0.75rem; color:var(--text-muted); display:block; margin-top:8px;">
+                                Raised on: {{ complaint.created_at|date:"M d, Y" }}
+                            </span>
+                        </div>
+                    {% empty %}
+                        <p style="color:var(--text-muted); font-size:0.9rem;">No complaints raised.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Write Review Modal Overlay -->
+<div id="review-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); backdrop-filter:blur(4px); z-index:1000; justify-content:center; align-items:center;">
+    <div class="glass-card" style="width:100%; max-width:450px; position:relative;">
+        <i class="fa-solid fa-times" style="position:absolute; top:20px; right:20px; cursor:pointer; font-size:1.2rem;" onclick="closeReviewModal()"></i>
+        <h3 style="font-size:1.3rem; font-weight:700; margin-bottom:10px;">Review <span id="modal-car-name">Car</span></h3>
+        <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:20px;">Share your rental experience with the community.</p>
+        
+        <form method="POST" id="review-form">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="rating">Rating (1 to 5 Stars)</label>
+                <select id="rating" name="rating" class="form-control" required>
+                    <option value="5">⭐⭐⭐⭐⭐ (5 - Excellent)</option>
+                    <option value="4">⭐⭐⭐⭐ (4 - Good)</option>
+                    <option value="3">⭐⭐⭐ (3 - Average)</option>
+                    <option value="2">⭐⭐ (2 - Poor)</option>
+                    <option value="1">⭐ (1 - Terrible)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="comment">Your Review Comments</label>
+                <textarea id="comment" name="comment" class="form-control" placeholder="What did you think of the ride? Condition, comfort, performance..." required></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width:100%;">
+                Submit Review
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function openReviewModal(carId, carName) {
+        document.getElementById('modal-car-name').innerText = carName;
+        document.getElementById('review-form').action = `/car/${carId}/review/`;
+        document.getElementById('review-modal').style.display = 'flex';
+    }
+
+    function closeReviewModal() {
+        document.getElementById('review-modal').style.display = 'none';
+    }
+</script>
+{% endblock %}

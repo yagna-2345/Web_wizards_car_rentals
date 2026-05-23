@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Search Cars - Web Wizards Car Rentals{% endblock %}
+
+{% block content %}
+<div class="container" style="padding: 40px 0;">
+    <h2 style="font-size: 2.2rem; font-weight:700; margin-bottom:10px;">Available <span>Rental Fleet</span></h2>
+    <p style="color:var(--text-muted); margin-bottom:40px;">Browse verified rental cars near you. Book instantly with customizable dates.</p>
+    
+    <div class="dashboard-container" style="grid-template-columns: 300px 1fr;">
+        <!-- Filters Sidebar -->
+        <aside class="glass-card" style="height: fit-content; padding: 24px;">
+            <h3 style="font-size: 1.25rem; margin-bottom: 20px; font-weight:700;"><i class="fa-solid fa-sliders"></i> Filter Cars</h3>
+            <form method="GET" action="{% url 'car_search' %}">
+                <!-- Location -->
+                <div class="form-group">
+                    <label for="location">Location</label>
+                    <input type="text" id="location" name="location" class="form-control" placeholder="e.g. New York" value="{{ request.GET.location }}">
+                </div>
+                
+                <!-- Category -->
+                <div class="form-group">
+                    <label for="category">Category</label>
+                    <select id="category" name="category" class="form-control">
+                        <option value="">All Categories</option>
+                        <option value="SEDAN" {% if request.GET.category == 'SEDAN' %}selected{% endif %}>Sedan</option>
+                        <option value="SUV" {% if request.GET.category == 'SUV' %}selected{% endif %}>SUV</option>
+                        <option value="LUXURY" {% if request.GET.category == 'LUXURY' %}selected{% endif %}>Luxury</option>
+                        <option value="ELECTRIC" {% if request.GET.category == 'ELECTRIC' %}selected{% endif %}>Electric</option>
+                        <option value="SPORTS" {% if request.GET.category == 'SPORTS' %}selected{% endif %}>Sports</option>
+                    </select>
+                </div>
+                
+                <!-- Transmission -->
+                <div class="form-group">
+                    <label for="transmission">Transmission</label>
+                    <select id="transmission" name="transmission" class="form-control">
+                        <option value="">All Types</option>
+                        <option value="AUTO" {% if request.GET.transmission == 'AUTO' %}selected{% endif %}>Automatic</option>
+                        <option value="MANUAL" {% if request.GET.transmission == 'MANUAL' %}selected{% endif %}>Manual</option>
+                    </select>
+                </div>
+
+                <!-- Price Range -->
+                <div class="form-group">
+                    <label for="max_price">Max Daily Rate ($)</label>
+                    <input type="number" id="max_price" name="max_price" class="form-control" placeholder="e.g. 150" value="{{ request.GET.max_price }}">
+                </div>
+
+                <div style="display:flex; flex-direction:column; gap:10px; margin-top:25px;">
+                    <button type="submit" class="btn btn-primary" style="width:100%;">
+                        <i class="fa-solid fa-filter"></i> Apply Filters
+                    </button>
+                    <a href="{% url 'car_search' %}" class="btn btn-secondary" style="width:100%; text-align:center;">
+                        Clear Filters
+                    </a>
+                </div>
+            </form>
+        </aside>
+
+        <!-- Cars Grid Content -->
+        <div>
+            <div class="cars-grid" style="margin-bottom: 0;">
+                {% for car in cars %}
+                    <div class="glass-card car-card">
+                        {% if car.image %}
+                            <img src="{{ car.image.url }}" alt="{{ car.brand }} {{ car.model }}" class="car-card-img">
+                        {% else %}
+                            <div style="height:200px; background: rgba(255,255,255,0.05); display:flex; justify-content:center; align-items:center; color:var(--text-muted);">
+                                <i class="fa-solid fa-car fa-3x"></i>
+                            </div>
+                        {% endif %}
+                        <div class="car-card-content">
+                            <div class="car-card-header">
+                                <div class="car-card-title">
+                                    <h3>{{ car.brand }} {{ car.model }}</h3>
+                                    <p><i class="fa-solid fa-map-marker-alt"></i> {{ car.location }}</p>
+                                </div>
+                                <span class="car-price">${{ car.daily_rate }}<span>/day</span></span>
+                            </div>
+                            <div class="car-specs">
+                                <span><i class="fa-solid fa-cog"></i> {{ car.get_transmission_display }}</span>
+                                <span><i class="fa-solid fa-gas-pump"></i> {{ car.get_fuel_type_display }}</span>
+                                <span><i class="fa-solid fa-chair"></i> {{ car.seats }} Seats</span>
+                            </div>
+                            <div style="margin-top:auto; display:flex; gap:10px; align-items:center;">
+                                <a href="{% url 'car_detail' car.id %}" class="btn btn-primary" style="flex-grow:1;">
+                                    Rent Car
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                {% empty %}
+                    <div class="glass-card" style="grid-column: 1/-1; text-align:center; padding: 60px;">
+                        <i class="fa-solid fa-car-triangle fa-3x" style="color:var(--text-muted); margin-bottom:20px;"></i>
+                        <p style="color:var(--text-muted); font-size:1.1rem;">No matching rental cars found for your current filter criteria.</p>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

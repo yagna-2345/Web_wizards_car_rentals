@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+
+{% block title %}Edit Vehicle - Web Wizards Car Rentals{% endblock %}
+
+{% block content %}
+<div class="container" style="padding: 40px 0; display:flex; justify-content:center; align-items:center;">
+    <div class="glass-card" style="width:100%; max-width:650px;">
+        <a href="{% url 'dashboard' %}" style="color:var(--text-muted); text-decoration:none; display:inline-flex; align-items:center; gap:8px; margin-bottom:20px; transition:var(--transition);" onmouseover="this.style.color='var(--text-main)'" onmouseout="this.style.color='var(--text-muted)'">
+            <i class="fa-solid fa-arrow-left"></i> Back to Console
+        </a>
+
+        <h2 style="font-size:2rem; font-weight:700; margin-bottom:10px;">Modify <span>Vehicle Specs</span></h2>
+        <p style="color:var(--text-muted); margin-bottom:30px; font-size:0.95rem;">Editing vehicle details will return the listing to a "Pending" status for admin verification.</p>
+
+        <form method="POST" action="{% url 'edit_car' car.id %}" enctype="multipart/form-data">
+            {% csrf_token %}
+            
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
+                <div class="form-group">
+                    <label for="brand">Brand / Make</label>
+                    <input type="text" id="brand" name="brand" class="form-control" value="{{ car.brand }}" required>
+                </div>
+                <div class="form-group">
+                    <label for="model">Model</label>
+                    <input type="text" id="model" name="model" class="form-control" value="{{ car.model }}" required>
+                </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
+                <div class="form-group">
+                    <label for="year">Year</label>
+                    <input type="number" id="year" name="year" class="form-control" value="{{ car.year }}" min="1900" max="2027" required>
+                </div>
+                <div class="form-group">
+                    <label for="category">Category</label>
+                    <select id="category" name="category" class="form-control" required>
+                        <option value="SEDAN" {% if car.category == 'SEDAN' %}selected{% endif %}>Sedan</option>
+                        <option value="SUV" {% if car.category == 'SUV' %}selected{% endif %}>SUV</option>
+                        <option value="LUXURY" {% if car.category == 'LUXURY' %}selected{% endif %}>Luxury</option>
+                        <option value="ELECTRIC" {% if car.category == 'ELECTRIC' %}selected{% endif %}>Electric</option>
+                        <option value="SPORTS" {% if car.category == 'SPORTS' %}selected{% endif %}>Sports</option>
+                    </select>
+                </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
+                <div class="form-group">
+                    <label for="transmission">Transmission</label>
+                    <select id="transmission" name="transmission" class="form-control" required>
+                        <option value="AUTO" {% if car.transmission == 'AUTO' %}selected{% endif %}>Automatic</option>
+                        <option value="MANUAL" {% if car.transmission == 'MANUAL' %}selected{% endif %}>Manual</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="fuel_type">Fuel Type</label>
+                    <select id="fuel_type" name="fuel_type" class="form-control" required>
+                        <option value="PETROL" {% if car.fuel_type == 'PETROL' %}selected{% endif %}>Petrol</option>
+                        <option value="DIESEL" {% if car.fuel_type == 'DIESEL' %}selected{% endif %}>Diesel</option>
+                        <option value="ELECTRIC" {% if car.fuel_type == 'ELECTRIC' %}selected{% endif %}>Electric</option>
+                        <option value="HYBRID" {% if car.fuel_type == 'HYBRID' %}selected{% endif %}>Hybrid</option>
+                    </select>
+                </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
+                <div class="form-group">
+                    <label for="seats">Seats</label>
+                    <input type="number" id="seats" name="seats" class="form-control" value="{{ car.seats }}" min="1" required>
+                </div>
+                <div class="form-group">
+                    <label for="daily_rate">Daily Rate ($)</label>
+                    <input type="number" id="daily_rate" name="daily_rate" class="form-control" value="{{ car.daily_rate }}" step="0.01" min="0" required>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="location">Location</label>
+                <input type="text" id="location" name="location" class="form-control" value="{{ car.location }}" required>
+            </div>
+
+            <div class="form-group">
+                <label for="images">Car Photos (Selecting new photos will override existing ones)</label>
+                <input type="file" id="images" name="images" class="form-control" accept="image/*" multiple style="padding: 7px 10px;">
+                <span style="font-size:0.8rem; color:var(--text-muted);">Currently has: {{ car.images.count }} gallery photo(s).</span>
+            </div>
+
+            <div class="form-group">
+                <label for="document">Registration/Insurance Document (Optional - upload to update)</label>
+                <input type="file" id="document" name="document" class="form-control" accept=".pdf,.doc,.docx" style="padding: 7px 10px;">
+                {% if car.document %}
+                    <span style="font-size:0.8rem; color:var(--text-muted);">Current: <a href="{{ car.document.url }}" target="_blank" style="color:var(--primary); text-decoration:none;">View current document</a></span>
+                {% endif %}
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width:100%; height:46px; margin-top:20px;">
+                <i class="fa-solid fa-save"></i> Save Changes & Resubmit
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}

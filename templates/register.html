@@ -1,0 +1,117 @@
+{% extends 'base.html' %}
+
+{% block title %}Register - Web Wizards Car Rentals{% endblock %}
+
+{% block content %}
+<div class="container" style="display:flex; justify-content:center; align-items:center; padding: 60px 20px;">
+    <div class="glass-card" style="width: 100%; max-width: 600px;">
+        <h2 style="font-size:2rem; font-weight:700; margin-bottom:10px; text-align:center;">Create <span>Account</span></h2>
+        <p style="color:var(--text-muted); text-align:center; margin-bottom:30px; font-size:0.95rem;">Select your role and start your journey</p>
+        
+        <form method="POST" action="{% url 'register' %}">
+            {% csrf_token %}
+            
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+                <div class="form-group">
+                    <label for="username"><i class="fa-solid fa-user"></i> Username</label>
+                    <input type="text" id="username" name="username" class="form-control" placeholder="Choose username" required>
+                </div>
+                <div class="form-group">
+                    <label for="email"><i class="fa-solid fa-envelope"></i> Email Address</label>
+                    <input type="email" id="email" name="email" class="form-control" placeholder="Enter email" required>
+                </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+                <div class="form-group">
+                    <label for="password"><i class="fa-solid fa-lock"></i> Password</label>
+                    <input type="password" id="password" name="password" class="form-control" placeholder="Create password" required>
+                </div>
+                <div class="form-group">
+                    <label for="password_confirm"><i class="fa-solid fa-lock"></i> Confirm Password</label>
+                    <input type="password" id="password_confirm" name="password_confirm" class="form-control" placeholder="Repeat password" required>
+                </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+                <div class="form-group">
+                    <label for="first_name"><i class="fa-solid fa-address-card"></i> Full Name</label>
+                    <input type="text" id="first_name" name="first_name" class="form-control" placeholder="Enter full name" required>
+                </div>
+                <div class="form-group">
+                    <label for="phone_number"><i class="fa-solid fa-phone"></i> Phone Number</label>
+                    <input type="text" id="phone_number" name="phone_number" class="form-control" placeholder="e.g. +1 555-0199" required>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="role"><i class="fa-solid fa-users"></i> Register As</label>
+                <select id="role" name="role" class="form-control" onchange="toggleFields()">
+                    <option value="CUSTOMER" {% if request.GET.role != 'vendor' %}selected{% endif %}>Customer (Booking a Car)</option>
+                    <option value="VENDOR" {% if request.GET.role == 'vendor' %}selected{% endif %}>Vendor / Supplier (Lending a Car)</option>
+                </select>
+            </div>
+
+            <!-- Customer Dynamic Fields -->
+            <div id="customer-fields" class="dynamic-fields">
+                <h3 style="font-size:1.1rem; margin:15px 0 10px; color:var(--primary); font-weight:600;"><i class="fa-solid fa-id-card"></i> Customer Information</h3>
+                <div class="form-group">
+                    <label for="driver_license">Driver's License Number</label>
+                    <input type="text" id="driver_license" name="driver_license" class="form-control" placeholder="e.g. DL-123456789">
+                </div>
+                <div class="form-group">
+                    <label for="address">Residential Address</label>
+                    <textarea id="address" name="address" class="form-control" placeholder="Enter your full billing & return address"></textarea>
+                </div>
+            </div>
+
+            <!-- Vendor Dynamic Fields -->
+            <div id="vendor-fields" class="dynamic-fields" style="display:none;">
+                <h3 style="font-size:1.1rem; margin:15px 0 10px; color:var(--accent); font-weight:600;"><i class="fa-solid fa-briefcase"></i> Vendor Details</h3>
+                <div class="form-group">
+                    <label for="company_name">Company / Business Name (Optional)</label>
+                    <input type="text" id="company_name" name="company_name" class="form-control" placeholder="e.g. Wizard Fleet Co.">
+                </div>
+                <div class="form-group">
+                    <label for="license_number">Business License / Tax Registration Number</label>
+                    <input type="text" id="license_number" name="license_number" class="form-control" placeholder="e.g. LIC-987654321">
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width:100%; margin-top:20px; height:46px;">
+                <i class="fa-solid fa-user-plus"></i> Register
+            </button>
+        </form>
+        
+        <div style="margin-top:25px; text-align:center; font-size:0.9rem; border-top:1px solid var(--border-color); padding-top:20px;">
+            <p style="color:var(--text-muted);">Already have an account? <a href="{% url 'login' %}" style="color:var(--primary); text-decoration:none; font-weight:600;">Login here</a></p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function toggleFields() {
+        const role = document.getElementById('role').value;
+        const customerFields = document.getElementById('customer-fields');
+        const vendorFields = document.getElementById('vendor-fields');
+        const driverLicense = document.getElementById('driver_license');
+        const licenseNumber = document.getElementById('license_number');
+
+        if (role === 'CUSTOMER') {
+            customerFields.style.display = 'block';
+            vendorFields.style.display = 'none';
+            driverLicense.setAttribute('required', 'required');
+            licenseNumber.removeAttribute('required');
+        } else {
+            customerFields.style.display = 'none';
+            vendorFields.style.display = 'block';
+            driverLicense.removeAttribute('required');
+            licenseNumber.setAttribute('required', 'required');
+        }
+    }
+    // Run once on load to ensure right fields are displayed
+    document.addEventListener('DOMContentLoaded', toggleFields);
+</script>
+{% endblock %}

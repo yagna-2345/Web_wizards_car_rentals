@@ -1,0 +1,120 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Web Wizards Car Rentals - Find Your Next Ride{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <div class="container">
+        <h1>Find, Book, and Rent a Car in <span>Easy Steps</span></h1>
+        <p>Experience the ultimate convenience of renting premium cars. Whether you are a traveler looking for a ride, or a car owner looking to make extra income, we've got you covered.</p>
+        <div style="display:flex; justify-content:center; gap:20px;">
+            <a href="{% url 'car_search' %}" class="btn btn-primary">Browse Available Cars</a>
+            {% if not user.is_authenticated or user.role == 'VENDOR' %}
+                <a href="{% url 'register' %}?role=vendor" class="btn btn-secondary">Become a Vendor/Supplier</a>
+            {% endif %}
+        </div>
+    </div>
+</section>
+
+<!-- Search Container -->
+<div class="container search-container">
+    <form action="{% url 'car_search' %}" method="GET" class="glass-card search-form">
+        <div class="form-group" style="margin-bottom:0;">
+            <label for="location"><i class="fa-solid fa-map-marker-alt"></i> Location</label>
+            <input type="text" id="location" name="location" placeholder="e.g. New York, Chicago" class="form-control" value="{{ request.GET.location }}">
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+            <label for="category"><i class="fa-solid fa-car-side"></i> Category</label>
+            <select id="category" name="category" class="form-control">
+                <option value="">All Categories</option>
+                <option value="SEDAN" {% if request.GET.category == 'SEDAN' %}selected{% endif %}>Sedan</option>
+                <option value="SUV" {% if request.GET.category == 'SUV' %}selected{% endif %}>SUV</option>
+                <option value="LUXURY" {% if request.GET.category == 'LUXURY' %}selected{% endif %}>Luxury</option>
+                <option value="ELECTRIC" {% if request.GET.category == 'ELECTRIC' %}selected{% endif %}>Electric</option>
+                <option value="SPORTS" {% if request.GET.category == 'SPORTS' %}selected{% endif %}>Sports</option>
+            </select>
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+            <label for="start_date"><i class="fa-solid fa-calendar-day"></i> From Date</label>
+            <input type="date" id="start_date" name="start_date" class="form-control" value="{{ request.GET.start_date }}">
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+            <label for="end_date"><i class="fa-solid fa-calendar-day"></i> To Date</label>
+            <input type="date" id="end_date" name="end_date" class="form-control" value="{{ request.GET.end_date }}">
+        </div>
+        <button type="submit" class="btn btn-primary" style="height:46px; margin-bottom: 2px;">
+            <i class="fa-solid fa-search"></i> Search
+        </button>
+    </form>
+</div>
+
+<!-- Featured Cars Section -->
+<section class="container" style="padding: 40px 0;">
+    <h2 style="font-size: 2.2rem; font-weight:700; margin-bottom:30px; text-align:center;">Featured <span>Premium Rides</span></h2>
+    <div class="cars-grid">
+        {% for car in featured_cars %}
+            <div class="glass-card car-card">
+                {% if car.image %}
+                    <img src="{{ car.image.url }}" alt="{{ car.brand }} {{ car.model }}" class="car-card-img">
+                {% else %}
+                    <div style="height:200px; background: rgba(255,255,255,0.05); display:flex; justify-content:center; align-items:center; color:var(--text-muted);">
+                        <i class="fa-solid fa-car fa-3x"></i>
+                    </div>
+                {% endif %}
+                <div class="car-card-content">
+                    <div class="car-card-header">
+                        <div class="car-card-title">
+                            <h3>{{ car.brand }} {{ car.model }}</h3>
+                            <p><i class="fa-solid fa-map-marker-alt"></i> {{ car.location }}</p>
+                        </div>
+                        <span class="car-price">${{ car.daily_rate }}<span>/day</span></span>
+                    </div>
+                    <div class="car-specs">
+                        <span><i class="fa-solid fa-cog"></i> {{ car.get_transmission_display }}</span>
+                        <span><i class="fa-solid fa-gas-pump"></i> {{ car.get_fuel_type_display }}</span>
+                        <span><i class="fa-solid fa-chair"></i> {{ car.seats }} Seats</span>
+                    </div>
+                    <div style="margin-top:auto;">
+                        <a href="{% url 'car_detail' car.id %}" class="btn btn-secondary" style="width:100%;">View Specifications & Rent</a>
+                    </div>
+                </div>
+            </div>
+        {% empty %}
+            <div class="glass-card" style="grid-column: 1/-1; text-align:center; padding: 40px;">
+                <p style="color:var(--text-muted);">No approved cars are listed yet. Be the first to list a car!</p>
+            </div>
+        {% endfor %}
+    </div>
+</section>
+
+<!-- Why Choose Us -->
+<section style="background: rgba(255,255,255,0.02); border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); padding: 80px 0;">
+    <div class="container">
+        <h2 style="font-size: 2.2rem; font-weight:700; margin-bottom:50px; text-align:center;">Simple Workflows for <span>Three Roles</span></h2>
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 30px;">
+            <div class="glass-card" style="text-align:center;">
+                <div style="width:60px; height:60px; border-radius:50%; background:var(--primary-glow); border:1px solid var(--primary); display:flex; justify-content:center; align-items:center; margin:0 auto 20px;">
+                    <i class="fa-solid fa-user-tie fa-lg" style="color:white;"></i>
+                </div>
+                <h3>1. Approved Vendors</h3>
+                <p style="color:var(--text-muted); font-size:0.95rem; margin-top:10px;">Vendors apply with registration documents. Once approved by our admins, they can upload cars, set prices, and manage active booking requests with transparent earnings tracking.</p>
+            </div>
+            <div class="glass-card" style="text-align:center;">
+                <div style="width:60px; height:60px; border-radius:50%; background:var(--accent-glow); border:1px solid var(--accent); display:flex; justify-content:center; align-items:center; margin:0 auto 20px;">
+                    <i class="fa-solid fa-user fa-lg" style="color:white;"></i>
+                </div>
+                <h3>2. Customers</h3>
+                <p style="color:var(--text-muted); font-size:0.95rem; margin-top:10px;">Customers register, browse and filter available cars, book instantly for custom dates, complete mock card checkout, and submit reviews after returns.</p>
+            </div>
+            <div class="glass-card" style="text-align:center;">
+                <div style="width:60px; height:60px; border-radius:50%; background: rgba(16, 185, 129, 0.2); border:1px solid var(--success); display:flex; justify-content:center; align-items:center; margin:0 auto 20px;">
+                    <i class="fa-solid fa-shield-halved fa-lg" style="color:white;"></i>
+                </div>
+                <h3>3. Super Admins</h3>
+                <p style="color:var(--text-muted); font-size:0.95rem; margin-top:10px;">Admins verify and approve new vendor profiles and cars, manage complaints and customer feedback, and view comprehensive earnings reports.</p>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

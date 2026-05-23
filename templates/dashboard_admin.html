@@ -1,0 +1,304 @@
+{% extends 'base.html' %}
+
+{% block title %}Admin Console - Web Wizards Car Rentals{% endblock %}
+
+{% block content %}
+<div class="container" style="padding: 40px 0;">
+    <h2 style="font-size:2.2rem; font-weight:700; margin-bottom:10px;">Welcome, <span>{% if request.user.first_name %}{{ request.user.first_name }}{% else %}{{ request.user.username }}{% endif %}</span>!</h2>
+    <p style="color:var(--text-muted); margin-bottom:40px;">Admin Console — Review application requests, manage dispute complaints, and audit system activities.</p>
+
+    <!-- Stats row -->
+    <div class="stats-grid">
+        <div class="glass-card stat-card">
+            <div class="stat-info">
+                <h4>Platform Revenue</h4>
+                <p>${{ total_revenue }}</p>
+            </div>
+            <i class="fa-solid fa-sack-dollar stat-icon" style="color:var(--success); opacity:0.4;"></i>
+        </div>
+        <div class="glass-card stat-card">
+            <div class="stat-info">
+                <h4>Awaiting Verification</h4>
+                <p>{{ pending_vendors_count }} Vendors</p>
+            </div>
+            <i class="fa-solid fa-user-shield stat-icon" style="color:var(--warning); opacity:0.4;"></i>
+        </div>
+        <div class="glass-card stat-card">
+            <div class="stat-info">
+                <h4>Unapproved Fleet</h4>
+                <p>{{ pending_cars_count }} Cars</p>
+            </div>
+            <i class="fa-solid fa-car-burst stat-icon" style="color:var(--accent); opacity:0.4;"></i>
+        </div>
+    </div>
+
+    <!-- Approvals Layout Grid -->
+    <div class="dashboard-container" style="grid-template-columns: 1fr 450px;">
+        
+        <!-- Left Column: Approvals -->
+        <div style="display:flex; flex-direction:column; gap:40px;">
+            
+            <!-- Vendor Verification Requests -->
+            <div class="glass-card">
+                <h3 style="font-size:1.25rem; font-weight:700; border-bottom:1px solid var(--border-color); padding-bottom:12px; margin-bottom:20px;">
+                    <i class="fa-solid fa-user-check"></i> Supplier Registration Requests ({{ pending_vendors.count }})
+                </h3>
+                <div class="table-responsive">
+                    <table class="custom-table">
+                        <thead>
+                            <tr>
+                                <th>Username</th>
+                                <th>Company</th>
+                                <th>License #</th>
+                                <th>Joined</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for vendor in pending_vendors %}
+                                <tr>
+                                    <td style="font-weight:600;">
+                                        {{ vendor.user.username }}
+                                        <span style="display:block; font-weight:400; color:var(--text-muted); font-size:0.8rem;">
+                                            {{ vendor.user.email }}
+                                        </span>
+                                    </td>
+                                    <td>{{ vendor.company_name|default:"Independent" }}</td>
+                                    <td><code>{{ vendor.license_number }}</code></td>
+                                    <td style="font-size:0.85rem;">{{ vendor.joined_date|date:"M d, Y" }}</td>
+                                    <td>
+                                        <div style="display:flex; gap:8px;">
+                                            <form method="POST" action="{% url 'verify_vendor' vendor.id 'APPROVE' %}">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-primary btn-sm" style="padding:4px 8px; font-size:0.75rem;">Approve</button>
+                                            </form>
+                                            <form method="POST" action="{% url 'verify_vendor' vendor.id 'REJECT' %}">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-danger btn-sm" style="padding:4px 8px; font-size:0.75rem;">Reject</button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="5" style="text-align:center; color:var(--text-muted); padding:20px;">
+                                        No pending supplier applications.
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Car Validation Requests -->
+            <div class="glass-card">
+                <h3 style="font-size:1.25rem; font-weight:700; border-bottom:1px solid var(--border-color); padding-bottom:12px; margin-bottom:20px;">
+                    <i class="fa-solid fa-file-shield"></i> Car Listing Approvals ({{ pending_cars.count }})
+                </h3>
+                <div class="table-responsive">
+                    <table class="custom-table">
+                        <thead>
+                            <tr>
+                                <th>Vehicle</th>
+                                <th>Supplier</th>
+                                <th>Doc Preview</th>
+                                <th>Daily Rate</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for car in pending_cars %}
+                                <tr>
+                                    <td>
+                                        <div style="display:flex; align-items:center; gap:12px;">
+                                            {% if car.image %}
+                                                <img src="{{ car.image.url }}" alt="" style="width:65px; height:45px; object-fit:cover; border-radius:6px; border:1px solid var(--border-color);">
+                                            {% endif %}
+                                            <div>
+                                                <span style="font-weight:600; display:block;">{{ car.brand }} {{ car.model }} ({{ car.year }})</span>
+                                                <span style="color:var(--text-muted); font-size:0.75rem; display:block; margin: 2px 0;">
+                                                    {{ car.get_category_display }} | {{ car.location }}
+                                                </span>
+                                                <a href="{% url 'car_detail' car.id %}" target="_blank" style="color:var(--primary); text-decoration:none; font-size:0.75rem; font-weight:600; display:inline-flex; align-items:center; gap:4px;">
+                                                    <i class="fa-solid fa-images"></i> View Specs & Photos ({{ car.images.count }})
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>{{ car.vendor.username }}</td>
+                                    <td>
+                                        {% if car.document %}
+                                            <a href="{{ car.document.url }}" target="_blank" class="btn btn-secondary btn-sm" style="padding:4px 8px; font-size:0.75rem;">
+                                                <i class="fa-solid fa-file-pdf"></i> View Doc
+                                            </a>
+                                        {% else %}
+                                            <span style="color:var(--danger); font-size:0.8rem;">No Doc</span>
+                                        {% endif %}
+                                    </td>
+                                    <td style="font-weight:600; color:var(--primary);">${{ car.daily_rate }}/day</td>
+                                    <td>
+                                        <div style="display:flex; gap:8px;">
+                                            <form method="POST" action="{% url 'verify_car' car.id 'APPROVE' %}">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-primary btn-sm" style="padding:4px 8px; font-size:0.75rem;">List Car</button>
+                                            </form>
+                                            <form method="POST" action="{% url 'verify_car' car.id 'REJECT' %}">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-danger btn-sm" style="padding:4px 8px; font-size:0.75rem;">Reject</button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="5" style="text-align:center; color:var(--text-muted); padding:20px;">
+                                        No pending car listings awaiting approval.
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Right Column: Complaints/Disputes Queue -->
+        <div style="display:flex; flex-direction:column; gap:40px;">
+            
+            <div class="glass-card">
+                <h3 style="font-size:1.25rem; font-weight:700; border-bottom:1px solid var(--border-color); padding-bottom:12px; margin-bottom:20px;">
+                    <i class="fa-solid fa-triangle-exclamation"></i> Complaints Queue ({{ active_complaints.count }})
+                </h3>
+                <div style="display:flex; flex-direction:column; gap:20px; max-height:600px; overflow-y:auto; padding-right:5px;">
+                    {% for complaint in active_complaints %}
+                        <div style="background:rgba(255,255,255,0.02); border:1px solid var(--border-color); border-radius:12px; padding:20px;">
+                            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px;">
+                                <div>
+                                    <span class="badge badge-pending">Pending</span>
+                                    <span style="font-weight:600; font-size:1rem; display:block; margin-top:8px;">{{ complaint.subject }}</span>
+                                </div>
+                                <span style="font-size:0.8rem; color:var(--text-muted);">{{ complaint.created_at|date:"M d" }}</span>
+                            </div>
+                            <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:15px;">{{ complaint.description }}</p>
+                            <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--border-color); padding-top:12px;">
+                                <span style="font-size:0.8rem; color:var(--primary); font-weight:500;">
+                                    User: {{ complaint.user.username }} ({{ complaint.user.get_role_display }})
+                                </span>
+                                <form method="POST" action="{% url 'resolve_complaint' complaint.id %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-secondary btn-sm" style="font-size:0.75rem; padding:4px 10px;">
+                                        Mark Resolved
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    {% empty %}
+                        <p style="color:var(--text-muted); font-size:0.95rem; text-align:center; padding:20px 0;">No pending disputes or user complaints.</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Wide Directory Card: All Vendors & Fleets -->
+    <div class="glass-card" style="margin-top: 40px;">
+        <h3 style="font-size:1.4rem; font-weight:700; border-bottom:1px solid var(--border-color); padding-bottom:12px; margin-bottom:20px;">
+            <i class="fa-solid fa-users-gear"></i> Platform Vendors & Fleets Directory
+        </h3>
+        
+        <div style="display:flex; flex-direction:column; gap:25px;">
+            {% for vendor in all_vendors %}
+                <div style="background:rgba(255, 255, 255, 0.02); border:1px solid var(--border-color); border-radius:12px; padding:20px; transition:var(--transition);" onmouseover="this.style.borderColor='var(--border-color-hover)'" onmouseout="this.style.borderColor='var(--border-color)'">
+                    <!-- Vendor Meta details header -->
+                    <div style="display:flex; justify-content:space-between; align-items:start; flex-wrap:wrap; gap:15px; border-bottom:1px dashed var(--border-color); padding-bottom:15px; margin-bottom:15px;">
+                        <div>
+                            <span style="font-size:1.2rem; font-weight:700; color:var(--text-main);">
+                                <i class="fa-solid fa-user-tag" style="color:var(--primary); margin-right:6px;"></i> {{ vendor.user.username }}
+                            </span>
+                            <span style="color:var(--text-muted); font-size:0.9rem; margin-left:15px;">
+                                <i class="fa-solid fa-envelope"></i> {{ vendor.user.email }}
+                            </span>
+                            <span style="color:var(--text-muted); font-size:0.9rem; margin-left:15px;">
+                                <i class="fa-solid fa-phone"></i> {{ vendor.user.phone_number|default:"N/A" }}
+                            </span>
+                        </div>
+                        <div style="text-align:right;">
+                            <span style="font-weight:600; display:block; font-size:0.95rem;">Company: {{ vendor.company_name|default:"Independent Supplier" }}</span>
+                            <span style="font-size:0.8rem; color:var(--text-muted); display:block; margin-top:4px;">
+                                License: <code>{{ vendor.license_number }}</code> | 
+                                Status: 
+                                {% if vendor.is_approved %}
+                                    <span class="badge badge-approved" style="font-size:0.65rem; padding: 2px 8px;">Approved</span>
+                                {% else %}
+                                    <span class="badge badge-pending" style="font-size:0.65rem; padding: 2px 8px;">Unverified</span>
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Cars fleet listed sub-grid -->
+                    <div>
+                        <h4 style="font-size:0.9rem; font-weight:600; color:var(--text-muted); text-transform:uppercase; margin-bottom:12px;">
+                            <i class="fa-solid fa-car-side"></i> Listed Vehicles Fleet ({{ vendor.user.cars.count }})
+                        </h4>
+                        
+                        <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap:15px;">
+                            {% for car in vendor.user.cars.all %}
+                                <div style="background:rgba(11, 15, 25, 0.4); border:1px solid var(--border-color); border-radius:8px; padding:15px; display:flex; flex-direction:column; gap:12px; transition: var(--transition);">
+                                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                                        <div>
+                                            <span style="font-weight:600; display:block; font-size:0.95rem;">{{ car.brand }} {{ car.model }}</span>
+                                            <span style="font-size:0.75rem; color:var(--text-muted); display:block; margin-top:2px;">
+                                                {{ car.year }} | ${{ car.daily_rate }}/day
+                                            </span>
+                                        </div>
+                                        <div style="text-align:right;">
+                                            {% if car.status == 'PENDING' %}
+                                                <span class="badge badge-pending" style="font-size:0.6rem; padding: 2px 6px;">Pending</span>
+                                            {% elif car.status == 'APPROVED' %}
+                                                <span class="badge badge-approved" style="font-size:0.6rem; padding: 2px 6px;">Listed</span>
+                                            {% else %}
+                                                <span class="badge badge-rejected" style="font-size:0.6rem; padding: 2px 6px;">Rejected</span>
+                                            {% endif %}
+                                            
+                                            <span style="display:block; font-size:0.7rem; margin-top:4px; font-weight:600; color:{% if car.is_available %}var(--success){% else %}var(--danger){% endif %};">
+                                                {% if car.is_available %}Available{% else %}Rented{% endif %}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Dynamic inline thumbnails of all car photos -->
+                                    <div style="border-top: 1px solid var(--border-color); padding-top:8px; display:flex; flex-direction:column; gap:8px;">
+                                        <span style="font-size:0.7rem; color:var(--text-muted); font-weight:600; text-transform:uppercase;">Photos ({{ car.images.count }}):</span>
+                                        <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                                            {% for car_img in car.images.all %}
+                                                <img src="{{ car_img.image.url }}" alt="" style="width:45px; height:32px; object-fit:cover; border-radius:4px; border:1px solid var(--border-color); cursor:pointer; transition:var(--transition);" onmouseover="this.style.transform='scale(1.1)'; this.style.borderColor='var(--primary)'" onmouseout="this.style.transform='scale(1)'; this.style.borderColor='var(--border-color)'" onclick="window.open('{% url 'car_detail' car.id %}', '_blank')" title="Click to view full photo">
+                                            {% empty %}
+                                                {% if car.image %}
+                                                    <img src="{{ car.image.url }}" alt="" style="width:45px; height:32px; object-fit:cover; border-radius:4px; border:1px solid var(--border-color); cursor:pointer; transition:var(--transition);" onmouseover="this.style.transform='scale(1.1)'; this.style.borderColor='var(--primary)'" onmouseout="this.style.transform='scale(1)'; this.style.borderColor='var(--border-color)'" onclick="window.open('{% url 'car_detail' car.id %}', '_blank')" title="Click to view full photo">
+                                                {% else %}
+                                                    <span style="font-size:0.75rem; color:var(--text-muted);">No photos uploaded</span>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </div>
+                                        <a href="{% url 'car_detail' car.id %}" target="_blank" style="color:var(--primary); text-decoration:none; font-size:0.75rem; font-weight:600; margin-top:4px; display:inline-flex; align-items:center; gap:4px; transition:var(--transition);" onmouseover="this.style.color='var(--text-main)'" onmouseout="this.style.color='var(--primary)'">
+                                            <i class="fa-solid fa-square-arrow-up-right"></i> View Full Details & Photos
+                                        </a>
+                                    </div>
+                                </div>
+                            {% empty %}
+                                <p style="color:var(--text-muted); font-size:0.85rem; grid-column: 1/-1;">No vehicles listed by this vendor yet.</p>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            {% empty %}
+                <p style="color:var(--text-muted); font-size:0.95rem; text-align:center;">No registered suppliers found on the platform.</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
