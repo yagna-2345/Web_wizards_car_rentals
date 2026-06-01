@@ -6,8 +6,12 @@ urlpatterns = [
     
     # Authentication
     path('register/', views.register_view, name='register'),
+    path('register/verify/', views.verify_otp_view, name='verify_otp'),
+    path('register/resend-otp/', views.resend_otp_view, name='resend_otp'),
     path('login/', views.login_view, name='login'),
     path('logout/', views.logout_view, name='logout'),
+    path('password-reset/', views.forgot_password_view, name='forgot_password'),
+    path('password-reset/verify/', views.forgot_password_verify_view, name='forgot_password_verify'),
     
     # Dashboards
     path('dashboard/', views.dashboard, name='dashboard'),
@@ -29,11 +33,19 @@ urlpatterns = [
     path('booking/<int:booking_id>/pay/', views.payment_submit, name='payment_submit'),
     path('booking/<int:booking_id>/cancel/', views.cancel_booking, name='cancel_booking'),
     path('booking/<int:booking_id>/return/', views.return_car, name='return_car'),
+    path('booking/<int:booking_id>/invoice/', views.download_invoice, name='download_invoice'),
     path('car/<int:car_id>/review/', views.car_review, name='car_review'),
     path('profile/edit/', views.edit_profile, name='edit_profile'),
     
+
     # Admin Controls
     path('admin/vendor/<int:profile_id>/<str:action>/', views.verify_vendor, name='verify_vendor'),
     path('admin/car/<int:car_id>/<str:action>/', views.verify_car, name='verify_car'),
     path('admin/complaint/<int:complaint_id>/resolve/', views.resolve_complaint, name='resolve_complaint'),
+    
+    # Mutual Discount Framework
+    path('discount/vendor/add/', views.vendor_add_discount, name='vendor_add_discount'),
+    path('discount/admin/add/', views.admin_add_discount, name='admin_add_discount'),
+    path('discount/<int:discount_id>/respond/<str:action>/', views.vendor_respond_discount, name='vendor_respond_discount'),
+    path('discount/<int:discount_id>/delete/', views.delete_discount, name='delete_discount'),
 ]

@@ -263,10 +263,46 @@ class CarRentalSystemTests(TestCase):
             'address': 'Gryffindor Dorm'
         })
         self.assertEqual(response.status_code, 302)
+        self.assertIn('/register/verify/', response.url)
+        
+        # Verify OTP is stored in session and send verification code
+        session = self.client.session
+        self.assertIn('pending_registration', session)
+        self.assertIn('registration_otp', session)
+        otp = session['registration_otp']
+        
+        # Post the correct OTP to verify view
+        verify_response = self.client.post('/register/verify/', {
+            'otp': otp
+        })
+        self.assertEqual(verify_response.status_code, 302)
         
         user = User.objects.get(username='new_user')
         self.assertEqual(user.first_name, 'Harry Potter')
         self.assertEqual(user.customer_profile.driver_license, 'DL-HARRY999')
+
+    def test_user_registration_with_invalid_otp(self):
+        response = self.client.post('/register/', {
+            'username': 'new_user_2',
+            'email': 'new2@test.com',
+            'password': 'password123',
+            'password_confirm': 'password123',
+            'phone_number': '1234567',
+            'role': 'CUSTOMER',
+            'first_name': 'Ron Weasley',
+            'driver_license': 'DL-RON888',
+            'address': 'Burrow Dorm'
+        })
+        self.assertEqual(response.status_code, 302)
+        
+        # Post invalid OTP
+        verify_response = self.client.post('/register/verify/', {
+            'otp': '000000'
+        })
+        self.assertEqual(verify_response.status_code, 200)
+        
+        # Verify user not created
+        self.assertFalse(User.objects.filter(username='new_user_2').exists())
 
     def test_edit_profile_view(self):
         self.client.login(username='test_customer', password='password123')
@@ -286,3 +322,219 @@ class CarRentalSystemTests(TestCase):
         self.assertEqual(self.customer_user.email, 'cust_new@test.com')
         self.assertEqual(self.customer_profile.driver_license, 'DL-NEW-CUST')
         self.assertEqual(self.customer_profile.address, 'New Dorm')
+
+    def test_forgot_password_workflow_success(self):
+        # Trigger forgot password with customer's email
+        response = self.client.post('/password-reset/', {
+            'email': 'cust@test.com'
+        })
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('/password-reset/verify/', response.url)
+
+        # Retrieve OTP from session
+        session = self.client.session
+        self.assertIn('reset_email', session)
+        self.assertIn('reset_otp', session)
+        otp = session['reset_otp']
+
+        # Complete reset with correct OTP
+        verify_response = self.client.post('/password-reset/verify/', {
+            'otp': otp,
+            'new_password': 'newpassword123',
+            'password_confirm': 'newpassword123'
+        })
+        self.assertEqual(verify_response.status_code, 302)
+
+        # Confirm password has updated by logging in with the new password
+        login_success = self.client.login(username='test_customer', password='newpassword123')
+        self.assertTrue(login_success)
+
+    def test_forgot_password_workflow_invalid_otp(self):
+        # Trigger forgot password
+        response = self.client.post('/password-reset/', {
+            'email': 'cust@test.com'
+        })
+        self.assertEqual(response.status_code, 302)
+
+        # Complete reset with INCORRECT OTP
+        verify_response = self.client.post('/password-reset/verify/', {
+            'otp': '000000',
+            'new_password': 'newpassword123',
+            'password_confirm': 'newpassword123'
+        })
+        self.assertEqual(verify_response.status_code, 200) # stays on same page due to error
+
+        # Confirm password has not updated; login with old password should still work
+        login_old = self.client.login(username='test_customer', password='password123')
+        self.assertTrue(login_old)
+
+    def test_time_based_pricing_calculation(self):
+        # Configure rates
+        self.car.daily_rate = Decimal('100.00')
+        self.car.hourly_rate = Decimal('10.00')
+        self.car.save()
+
+        self.client.login(username='test_customer', password='password123')
+
+        # Test Case 1: Rent for 5 hours (5 * ₹10.00 = ₹50.00)
+        response = self.client.post(
+            f'/car/{self.car.id}/book/',
+            {
+                'start_date': '2026-06-01T10:00',
+                'end_date': '2026-06-01T15:00'
+            }
+        )
+        self.assertEqual(response.status_code, 302)
+        booking1 = Booking.objects.filter(customer=self.customer_user, car=self.car).latest('id')
+        self.assertEqual(booking1.total_price, Decimal('50.00'))
+
+        # Test Case 2: Rent for 12 hours (₹120.00 raw, capped at ₹100.00 daily rate)
+        response = self.client.post(
+            f'/car/{self.car.id}/book/',
+            {
+                'start_date': '2026-06-02T10:00',
+                'end_date': '2026-06-02T22:00'
+            }
+        )
+        self.assertEqual(response.status_code, 302)
+        booking2 = Booking.objects.filter(customer=self.customer_user, car=self.car).latest('id')
+        self.assertEqual(booking2.total_price, Decimal('100.00'))
+
+        # Test Case 3: Rent for 1 day and 3 hours (27 hours total -> 1 day + 3 hours * ₹10 = ₹130.00)
+        response = self.client.post(
+            f'/car/{self.car.id}/book/',
+            {
+                'start_date': '2026-06-03T10:00',
+                'end_date': '2026-06-04T13:00'
+            }
+        )
+        self.assertEqual(response.status_code, 302)
+        booking3 = Booking.objects.filter(customer=self.customer_user, car=self.car).latest('id')
+        self.assertEqual(booking3.total_price, Decimal('130.00'))
+
+
+class CarRentalDiscountTests(TestCase):
+    def setUp(self):
+        self.customer_user = User.objects.create_user(
+            username='test_customer_discount',
+            email='cust_discount@test.com',
+            password='password123',
+            role='CUSTOMER'
+        )
+        self.vendor_user = User.objects.create_user(
+            username='test_vendor_discount',
+            email='vendor_discount@test.com',
+            password='password123',
+            role='VENDOR'
+        )
+        self.vendor_profile = VendorProfile.objects.create(
+            user=self.vendor_user,
+            company_name='Discount Fleet LLC',
+            license_number='LIC-DISC111',
+            is_approved=True
+        )
+        self.car = Car.objects.create(
+            vendor=self.vendor_user,
+            brand='Nissan',
+            model='Leaf',
+            year=2022,
+            category='ELECTRIC',
+            daily_rate=Decimal('100.00'),
+            hourly_rate=Decimal('5.00'),
+            location='Brooklyn, NY',
+            status='APPROVED',
+            is_available=True
+        )
+
+    def test_discount_model_properties(self):
+        from .models import Discount
+        discount = Discount.objects.create(
+            car=self.car,
+            discount_percentage=15,
+            min_days=3,
+            status='APPROVED',
+            created_by='VENDOR'
+        )
+        self.assertEqual(discount.get_discounted_rate, Decimal('85.00'))
+
+    def test_booking_discount_application(self):
+        from .models import Discount
+        Discount.objects.create(
+            car=self.car,
+            discount_percentage=20,
+            min_days=3,
+            status='APPROVED',
+            created_by='VENDOR'
+        )
+
+        self.client.login(username='test_customer_discount', password='password123')
+
+        # Booking for 2 days (total_hours = 48 hours). No discount because min_days is 3.
+        # Price should be 2 * 100 = 200.00
+        response = self.client.post(
+            f'/car/{self.car.id}/book/',
+            {
+                'start_date': '2026-07-01T10:00',
+                'end_date': '2026-07-03T10:00'
+            }
+        )
+        self.assertEqual(response.status_code, 302)
+        booking1 = Booking.objects.filter(customer=self.customer_user, car=self.car).latest('id')
+        self.assertEqual(booking1.total_price, Decimal('200.00'))
+
+        # Booking for 3 days (total_hours = 72 hours). Should get 20% discount.
+        # Raw price is 3 * 100 = 300.00. Discounted is 300 * 0.8 = 240.00.
+        response = self.client.post(
+            f'/car/{self.car.id}/book/',
+            {
+                'start_date': '2026-07-04T10:00',
+                'end_date': '2026-07-07T10:00'
+            }
+        )
+        self.assertEqual(response.status_code, 302)
+        booking2 = Booking.objects.filter(customer=self.customer_user, car=self.car).latest('id')
+        self.assertEqual(booking2.total_price, Decimal('240.00'))
+
+    def test_promo_negotiation_workflow(self):
+        from .models import Discount
+        # 1. Admin creates pending promo
+        # Log in as vendor, verify cannot access admin view (will redirect)
+        self.client.login(username='test_vendor_discount', password='password123')
+        response = self.client.post(
+            '/discount/admin/add/',
+            {'car': self.car.id, 'discount_percentage': 25, 'min_days': 5}
+        )
+        self.assertEqual(response.status_code, 302)
+        
+        # Superuser/admin login
+        admin_user = User.objects.create_superuser(
+            username='admin_user',
+            email='admin@test.com',
+            password='adminpassword',
+            role='ADMIN'
+        )
+        self.client.login(username='admin_user', password='adminpassword')
+        response = self.client.post(
+            '/discount/admin/add/',
+            {'car': self.car.id, 'discount_percentage': 25, 'min_days': 5}
+        )
+        self.assertEqual(response.status_code, 302)
+        
+        # Verify it is created and PENDING_VENDOR
+        promo = Discount.objects.filter(car=self.car, discount_percentage=25).first()
+        self.assertIsNotNone(promo)
+        self.assertEqual(promo.status, 'PENDING_VENDOR')
+        self.assertEqual(promo.created_by, 'ADMIN')
+
+        # 2. Vendor responds to pending promo
+        self.client.login(username='test_vendor_discount', password='password123')
+        # Accept promo
+        response = self.client.post(f'/discount/{promo.id}/respond/ACCEPT/')
+        self.assertEqual(response.status_code, 302)
+        promo.refresh_from_db()
+        self.assertEqual(promo.status, 'APPROVED')
+
+        # Delete promo
+        response = self.client.post(f'/discount/{promo.id}/delete/')
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(Discount.objects.filter(id=promo.id).exists())

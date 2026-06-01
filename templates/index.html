@@ -68,7 +68,7 @@
                             <h3>{{ car.brand }} {{ car.model }}</h3>
                             <p><i class="fa-solid fa-map-marker-alt"></i> {{ car.location }}</p>
                         </div>
-                        <span class="car-price">${{ car.daily_rate }}<span>/day</span></span>
+                        <span class="car-price">₹{{ car.daily_rate }}<span>/day</span></span>
                     </div>
                     <div class="car-specs">
                         <span><i class="fa-solid fa-cog"></i> {{ car.get_transmission_display }}</span>

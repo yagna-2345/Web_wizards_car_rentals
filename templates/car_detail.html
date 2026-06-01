@@ -142,9 +142,15 @@
         <div>
             <div class="glass-card booking-widget" style="position: sticky; top: 110px;">
                 <h3 style="font-size: 1.5rem; font-weight:700;">Rent this vehicle</h3>
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:25px;">
-                    <span style="color:var(--text-muted);">Daily Rate</span>
-                    <span style="font-size:1.8rem; font-weight:800; color:var(--primary);">${{ car.daily_rate }}<span style="font-size:0.9rem; color:var(--text-muted); font-weight:500;">/day</span></span>
+                <div style="background:rgba(255,255,255,0.02); border:1px solid var(--border-color); border-radius:10px; padding:15px; margin-bottom:25px; display:flex; flex-direction:column; gap:10px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span style="color:var(--text-muted); font-size:0.95rem;">Daily Rate</span>
+                        <span style="font-size:1.5rem; font-weight:800; color:var(--primary);">₹{{ car.daily_rate }}<span style="font-size:0.8rem; color:var(--text-muted); font-weight:500;">/day</span></span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid rgba(255,255,255,0.05); padding-top:10px;">
+                        <span style="color:var(--text-muted); font-size:0.95rem;">Hourly Rate</span>
+                        <span style="font-size:1.3rem; font-weight:700; color:var(--text-main);">₹{{ car.get_hourly_rate|floatformat:2 }}<span style="font-size:0.8rem; color:var(--text-muted); font-weight:500;">/hr</span></span>
+                    </div>
                 </div>
 
                 {% if not car.is_available %}
@@ -164,33 +170,126 @@
                 {% else %}
                     <form method="POST" action="{% url 'book_car' car.id %}">
                         {% csrf_token %}
+                        
+                        <!-- Visual Interactive Calendar Grid -->
                         <div class="form-group">
-                            <label for="start_date">Pick-up Date & Time</label>
-                            <input type="datetime-local" id="start_date" name="start_date" class="form-control" required onchange="calculatePrice()">
+                            <label style="display:flex; justify-content:space-between; align-items:center;">
+                                <span><i class="fa-solid fa-calendar-days" style="color:var(--primary);"></i> Interactive Availability Calendar</span>
+                                <span style="font-size:0.75rem; color:var(--text-muted);">Click to drag/select dates</span>
+                            </label>
+                            
+                            <div class="grid-calendar-card" style="background: rgba(255,255,255,0.02); border:1px solid var(--border-color); border-radius:12px; padding:15px; margin-top:5px; box-shadow:inset 0 4px 10px rgba(0,0,0,0.2);">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                                    <button type="button" id="prev-month" class="btn btn-secondary btn-sm" style="padding:4px 8px; font-size:0.75rem; height:28px;"><i class="fa-solid fa-chevron-left"></i></button>
+                                    <span id="calendar-title" style="font-weight:700; font-size:0.9rem; letter-spacing:0.5px;">May 2026</span>
+                                    <button type="button" id="next-month" class="btn btn-secondary btn-sm" style="padding:4px 8px; font-size:0.75rem; height:28px;"><i class="fa-solid fa-chevron-right"></i></button>
+                                </div>
+                                
+                                <div style="display:grid; grid-template-columns: repeat(7, 1fr); text-align:center; font-size:0.7rem; color:var(--text-muted); font-weight:700; margin-bottom:8px; text-transform:uppercase;">
+                                    <div>Su</div><div>Mo</div><div>Tu</div><div>We</div><div>Th</div><div>Fr</div><div>Sa</div>
+                                </div>
+                                <div id="calendar-days" style="display:grid; grid-template-columns: repeat(7, 1fr); gap:5px; text-align:center;">
+                                    <!-- Rendered dynamically by JS -->
+                                </div>
+                                
+                                <div style="display:flex; justify-content:space-between; gap:10px; margin-top:12px; font-size:0.7rem; color:var(--text-muted); border-top:1px solid rgba(255,255,255,0.05); padding-top:10px;">
+                                    <div style="display:flex; align-items:center; gap:4px;"><span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--primary); box-shadow:0 0 6px var(--primary-glow);"></span>Selected</div>
+                                    <div style="display:flex; align-items:center; gap:4px;"><span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:rgba(239, 68, 68, 0.2); border:1px solid var(--danger);"></span>Booked</div>
+                                    <div style="display:flex; align-items:center; gap:4px;"><span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:rgba(255,255,255,0.05); border:1px solid var(--border-color);"></span>Available</div>
+                                </div>
+                            </div>
                         </div>
-                        <div class="form-group">
+
+                        <div class="form-group" style="display:none;">
+                            <label for="start_date">Pick-up Date & Time</label>
+                            <div style="display:grid; grid-template-columns: 1.4fr 1fr; gap:10px;">
+                                <input type="date" id="start_date" name="start_date" class="form-control" required onchange="calculatePrice()">
+                                <input type="time" id="start_time" name="start_time" class="form-control" value="10:00" required onchange="calculatePrice()">
+                            </div>
+                        </div>
+                        <div class="form-group" style="display:none;">
                             <label for="end_date">Return Date & Time</label>
-                            <input type="datetime-local" id="end_date" name="end_date" class="form-control" required onchange="calculatePrice()">
+                            <div style="display:grid; grid-template-columns: 1.4fr 1fr; gap:10px;">
+                                <input type="date" id="end_date" name="end_date" class="form-control" required onchange="calculatePrice()">
+                                <input type="time" id="end_time" name="end_time" class="form-control" value="10:00" required onchange="calculatePrice()">
+                            </div>
+                        </div>
+
+                        <!-- Manual Date Inputs (styled beautifully in a collapsible grid for accessibility) -->
+                        <div style="background: rgba(255,255,255,0.01); border: 1px solid var(--border-color); border-radius:10px; padding:12px; margin-bottom:20px;">
+                            <div style="display:flex; justify-content:space-between; font-size:0.8rem; color:var(--text-muted); margin-bottom:8px; font-weight:500;">
+                                <span>Selected Dates</span>
+                                <a href="#" id="toggle-manual-dates" style="color:var(--primary); text-decoration:none; font-weight:600; font-size:0.75rem;">Edit Manually</a>
+                            </div>
+                            <div id="selected-dates-summary" style="font-size:0.85rem; font-weight:600; color:var(--text-main); display:flex; flex-direction:column; gap:4px;">
+                                <span>Pick-up: <span id="summary-pickup" style="color:var(--text-muted); font-weight:normal;">Not selected</span></span>
+                                <span>Return: <span id="summary-return" style="color:var(--text-muted); font-weight:normal;">Not selected</span></span>
+                            </div>
+                            <div id="manual-dates-container" style="display:none; flex-direction:column; gap:10px; margin-top:12px; border-top:1px dashed var(--border-color); padding-top:12px;">
+                                <div style="display:grid; grid-template-columns: 1.4fr 1fr; gap:10px;">
+                                    <input type="date" id="manual_start_date" class="form-control form-control-sm" style="font-size:0.8rem; padding:8px 10px;">
+                                    <input type="time" id="manual_start_time" class="form-control form-control-sm" value="10:00" style="font-size:0.8rem; padding:8px 10px;">
+                                </div>
+                                <div style="display:grid; grid-template-columns: 1.4fr 1fr; gap:10px;">
+                                    <input type="date" id="manual_end_date" class="form-control form-control-sm" style="font-size:0.8rem; padding:8px 10px;">
+                                    <input type="time" id="manual_end_time" class="form-control form-control-sm" value="10:00" style="font-size:0.8rem; padding:8px 10px;">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Smart Discount Alert & Progress Bar -->
+                        <div id="smart-discount-card" style="display:none; background:rgba(16, 185, 129, 0.05); border:1px solid rgba(16, 185, 129, 0.15); border-radius:10px; padding:15px; margin: 15px 0 20px; flex-direction:column; gap:8px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.85rem;">
+                                <span id="discount-title" style="font-weight:700; color:var(--success);"><i class="fa-solid fa-percent"></i> Discount Status</span>
+                                <span id="discount-badge" class="badge badge-approved" style="font-size:0.75rem; padding: 3px 8px; font-weight:700;">0% OFF</span>
+                            </div>
+                            <div style="width:100%; height:6px; background:rgba(255,255,255,0.05); border-radius:3px; overflow:hidden;">
+                                <div id="discount-progress" style="width: 0%; height:100%; background:linear-gradient(90deg, var(--success) 0%, #34D399 100%); transition: width 0.4s ease; box-shadow:0 0 10px rgba(16,185,129,0.3);"></div>
+                            </div>
+                            <p id="discount-msg" style="font-size:0.78rem; color:var(--text-muted); margin:0; line-height:1.4;"></p>
                         </div>
 
                         <!-- Price Breakdown Modal -->
-                        <div id="price-breakdown" style="display:none; background:rgba(255,255,255,0.03); border:1px solid var(--border-color); border-radius:8px; padding:15px; margin: 20px 0;">
-                            <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.9rem; color:var(--text-muted);">
+                        <div id="price-breakdown" style="display:none; background:rgba(255,255,255,0.03); border:1px solid var(--border-color); border-radius:12px; padding:20px; margin: 20px 0; flex-direction:column; gap:10px; box-shadow:0 4px 20px rgba(0,0,0,0.15);">
+                            <div style="display:flex; justify-content:space-between; font-size:0.9rem; color:var(--text-muted); border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:8px;">
                                 <span>Rental Duration:</span>
-                                <span id="rental-days">0 days</span>
+                                <span id="rental-days" style="font-weight:700; color:var(--text-main);">0 days</span>
                             </div>
-                            <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.9rem; color:var(--text-muted);">
-                                <span>Rate per Day:</span>
-                                <span>${{ car.daily_rate }}</span>
+                            <div id="breakdown-details" style="font-size:0.85rem; color:var(--text-muted); display:flex; flex-direction:column; gap:8px; padding: 4px 0;">
+                                <!-- Populate Dynamically -->
                             </div>
-                            <div style="display:flex; justify-content:space-between; border-top:1px solid var(--border-color); padding-top:8px; font-weight:700; font-size:1.1rem;">
+                            <div style="display:flex; justify-content:space-between; font-weight:800; font-size:1.3rem; border-top:1px solid rgba(255,255,255,0.08); padding-top:12px; margin-top:4px;">
                                 <span>Total Price:</span>
-                                <span id="total-price" style="color:var(--primary);">$0.00</span>
+                                <span id="total-price" style="color:var(--primary); text-shadow: 0 0 10px var(--primary-glow); font-size:1.6rem; font-weight:800;">₹0.00</span>
                             </div>
                         </div>
 
-                        <button type="submit" id="book-btn" class="btn btn-primary" style="width:100%; height:46px;">
-                            <i class="fa-solid fa-credit-card"></i> Proceed to Checkout
+                        <!-- Terms & Conditions Section -->
+                        <div style="background:rgba(255, 255, 255, 0.02); border:1px solid var(--border-color); border-radius:10px; padding:15px; margin: 20px 0 15px 0;">
+                            <h4 style="font-size:0.88rem; font-weight:700; margin-bottom:10px; color:var(--text-main); display:flex; align-items:center; gap:8px;">
+                                <i class="fa-solid fa-file-contract" style="color:var(--primary);"></i> Rental Terms & Conditions
+                            </h4>
+                            
+                            <div style="height:100px; overflow-y:auto; font-size:0.75rem; color:var(--text-muted); background:rgba(0,0,0,0.15); border:1px solid var(--border-color); border-radius:6px; padding:10px; line-height:1.5; margin-bottom:12px;">
+                                <p style="margin-bottom:6px; font-weight:600; color:var(--text-main);">By requesting a booking, the Customer explicitly agrees to the following terms:</p>
+                                <ol style="padding-left:15px; display:flex; flex-direction:column; gap:4px;">
+                                    <li><strong>Driving License:</strong> Valid active driving license is mandatory.</li>
+                                    <li><strong>Collateral Submission:</strong> Must submit a two-wheeler vehicle along with its valid original Registration Certificate (RC) card at pick-up.</li>
+                                    <li><strong>Original License Deposit:</strong> Must submit physical original driving license to owner at pick-up.</li>
+                                    <li><strong>Damage Liability:</strong> All repairs and recovery costs for any rental damage are 100% liability of the customer.</li>
+                                </ol>
+                            </div>
+
+                            <div style="display:flex; align-items:start; gap:8px; cursor:pointer;">
+                                <input type="checkbox" id="agree_terms" required style="margin-top:3px; width:14px; height:14px; cursor:pointer;">
+                                <label for="agree_terms" style="font-size:0.78rem; color:var(--text-muted); cursor:pointer; line-height:1.3;">
+                                    I certify that I agree to all mandatory terms, collateral policies, and damage liability.
+                                </label>
+                            </div>
+                        </div>
+
+                        <button type="submit" id="book-btn" class="btn btn-primary" style="width:100%; height:48px;" disabled>
+                            <i class="fa-solid fa-rocket"></i> Request Booking Reservation
                         </button>
                     </form>
                 {% endif %}
@@ -203,69 +302,377 @@
 {% block extra_js %}
 <script>
     const dailyRate = parseFloat("{{ car.daily_rate }}");
+    const hourlyRate = parseFloat("{{ car.get_hourly_rate|floatformat:2 }}");
+    const blockedRanges = JSON.parse('{{ blocked_ranges_json|safe|escapejs }}');
+    const activePromos = JSON.parse('{{ discounts_json|safe|escapejs }}');
     
-    // Offset local timezone difference to ISO string
-    const nowLocal = new Date();
-    const offset = nowLocal.getTimezoneOffset() * 60000;
-    const nowISO = new Date(nowLocal.getTime() - offset).toISOString().slice(0, 16);
-
+    let selectedStartDate = null;
+    let selectedEndDate = null;
+    
+    // Calendar State
+    let currentDate = new Date();
+    let currentMonth = currentDate.getMonth();
+    let currentYear = currentDate.getFullYear();
+    
+    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    
     document.addEventListener('DOMContentLoaded', () => {
-        const startInput = document.getElementById('start_date');
-        const endInput = document.getElementById('end_date');
-        
-        if(startInput) {
-            startInput.setAttribute('min', nowISO);
-        }
+        initCalendar();
+        setupManualDates();
     });
-
-    function calculatePrice() {
+    
+    function initCalendar() {
+        renderCalendar();
+        
+        document.getElementById('prev-month').addEventListener('click', (e) => {
+            e.preventDefault();
+            currentMonth--;
+            if (currentMonth < 0) {
+                currentMonth = 11;
+                currentYear--;
+            }
+            renderCalendar();
+        });
+        
+        document.getElementById('next-month').addEventListener('click', (e) => {
+            e.preventDefault();
+            currentMonth++;
+            if (currentMonth > 11) {
+                currentMonth = 0;
+                currentYear++;
+            }
+            renderCalendar();
+        });
+    }
+    
+    function renderCalendar() {
+        const titleEl = document.getElementById('calendar-title');
+        const gridEl = document.getElementById('calendar-days');
+        
+        titleEl.textContent = `${monthNames[currentMonth]} ${currentYear}`;
+        gridEl.innerHTML = '';
+        
+        const firstDayIndex = new Date(currentYear, currentMonth, 1).getDay();
+        const lastDay = new Date(currentYear, currentMonth + 1, 0).getDate();
+        
+        // Blank cells before first day of month
+        for (let i = 0; i < firstDayIndex; i++) {
+            const blank = document.createElement('div');
+            gridEl.appendChild(blank);
+        }
+        
+        const today = new Date();
+        today.setHours(0,0,0,0);
+        
+        for (let day = 1; day <= lastDay; day++) {
+            const date = new Date(currentYear, currentMonth, day);
+            const dateStr = date.toISOString().split('T')[0];
+            
+            const cell = document.createElement('div');
+            cell.textContent = day;
+            cell.classList.add('calendar-day');
+            
+            // Check if past
+            if (date < today) {
+                cell.classList.add('disabled');
+            } else {
+                // Check if booked/reserved
+                const isBooked = isDateBlocked(date);
+                if (isBooked) {
+                    cell.classList.add('reserved');
+                    cell.title = "Already Reserved";
+                } else {
+                    // Check if selected
+                    if (selectedStartDate && dateStr === selectedStartDate) {
+                        cell.classList.add('selected');
+                    } else if (selectedEndDate && dateStr === selectedEndDate) {
+                        cell.classList.add('selected');
+                    } else if (selectedStartDate && selectedEndDate && dateStr > selectedStartDate && dateStr < selectedEndDate) {
+                        cell.classList.add('in-range');
+                    }
+                    
+                    // Click handler
+                    cell.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        handleDateClick(dateStr);
+                    });
+                }
+            }
+            
+            gridEl.appendChild(cell);
+        }
+    }
+    
+    function isDateBlocked(date) {
+        const dStr = date.toISOString().split('T')[0];
+        for (let range of blockedRanges) {
+            const startStr = range.start.split('T')[0];
+            const endStr = range.end.split('T')[0];
+            if (dStr >= startStr && dStr <= endStr) {
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    function handleDateClick(dateStr) {
+        if (!selectedStartDate || (selectedStartDate && selectedEndDate)) {
+            selectedStartDate = dateStr;
+            selectedEndDate = null;
+        } else if (selectedStartDate && !selectedEndDate) {
+            if (dateStr < selectedStartDate) {
+                selectedStartDate = dateStr;
+            } else {
+                // Verify range does not contain blocked dates
+                if (rangeContainsBlocked(selectedStartDate, dateStr)) {
+                    alert("Selected range overlaps with an existing reservation. Please select available dates.");
+                    selectedStartDate = dateStr;
+                } else {
+                    selectedEndDate = dateStr;
+                }
+            }
+        }
+        
+        updateInputsAndSummary();
+        renderCalendar();
+    }
+    
+    function rangeContainsBlocked(startStr, endStr) {
+        const start = new Date(startStr);
+        const end = new Date(endStr);
+        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+            if (isDateBlocked(d)) {
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    function updateInputsAndSummary() {
         const startInput = document.getElementById('start_date');
         const endInput = document.getElementById('end_date');
+        const pickupSum = document.getElementById('summary-pickup');
+        const returnSum = document.getElementById('summary-return');
+        const manualStart = document.getElementById('manual_start_date');
+        const manualEnd = document.getElementById('manual_end_date');
+        
+        if (selectedStartDate) {
+            startInput.value = selectedStartDate;
+            manualStart.value = selectedStartDate;
+            pickupSum.textContent = `${selectedStartDate} @ 10:00 AM`;
+            pickupSum.style.color = 'var(--text-main)';
+        } else {
+            startInput.value = '';
+            pickupSum.textContent = 'Not selected';
+            pickupSum.style.color = 'var(--text-muted)';
+        }
+        
+        if (selectedEndDate) {
+            endInput.value = selectedEndDate;
+            manualEnd.value = selectedEndDate;
+            returnSum.textContent = `${selectedEndDate} @ 10:00 AM`;
+            returnSum.style.color = 'var(--text-main)';
+        } else {
+            endInput.value = '';
+            returnSum.textContent = 'Not selected';
+            returnSum.style.color = 'var(--text-muted)';
+        }
+        
+        calculatePrice();
+    }
+    
+    function setupManualDates() {
+        const toggleBtn = document.getElementById('toggle-manual-dates');
+        const container = document.getElementById('manual-dates-container');
+        
+        toggleBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (container.style.display === 'none') {
+                container.style.display = 'flex';
+                toggleBtn.textContent = 'Close Editor';
+            } else {
+                container.style.display = 'none';
+                toggleBtn.textContent = 'Edit Manually';
+            }
+        });
+        
+        const manualStart = document.getElementById('manual_start_date');
+        const manualStartTime = document.getElementById('manual_start_time');
+        const manualEnd = document.getElementById('manual_end_date');
+        const manualEndTime = document.getElementById('manual_end_time');
+        
+        const syncManual = () => {
+            if (manualStart.value) {
+                selectedStartDate = manualStart.value;
+                document.getElementById('start_date').value = manualStart.value;
+                document.getElementById('start_time').value = manualStartTime.value;
+                document.getElementById('summary-pickup').textContent = `${manualStart.value} @ ${manualStartTime.value}`;
+            }
+            if (manualEnd.value) {
+                selectedEndDate = manualEnd.value;
+                document.getElementById('end_date').value = manualEnd.value;
+                document.getElementById('end_time').value = manualEndTime.value;
+                document.getElementById('summary-return').textContent = `${manualEnd.value} @ ${manualEndTime.value}`;
+            }
+            calculatePrice();
+            renderCalendar();
+        };
+        
+        manualStart.addEventListener('change', syncManual);
+        manualStartTime.addEventListener('change', syncManual);
+        manualEnd.addEventListener('change', syncManual);
+        manualEndTime.addEventListener('change', syncManual);
+    }
+    
+    function calculatePrice() {
+        const startDateInput = document.getElementById('start_date');
+        const startTimeInput = document.getElementById('start_time');
+        const endDateInput = document.getElementById('end_date');
+        const endTimeInput = document.getElementById('end_time');
         const breakdown = document.getElementById('price-breakdown');
         const daysEl = document.getElementById('rental-days');
+        const detailsEl = document.getElementById('breakdown-details');
         const totalEl = document.getElementById('total-price');
         const bookBtn = document.getElementById('book-btn');
-
-        if (!startInput.value) return;
-
-        endInput.setAttribute('min', startInput.value);
-
-        if (!endInput.value) return;
-
-        const start = new Date(startInput.value);
-        const end = new Date(endInput.value);
-
-        if (end < start) {
+        
+        const discountCard = document.getElementById('smart-discount-card');
+        const discountBadge = document.getElementById('discount-badge');
+        const discountProgress = document.getElementById('discount-progress');
+        const discountMsg = document.getElementById('discount-msg');
+        
+        if (!startDateInput.value || !startTimeInput.value || !endDateInput.value || !endTimeInput.value) {
             breakdown.style.display = 'none';
+            discountCard.style.display = 'none';
             bookBtn.setAttribute('disabled', 'disabled');
             return;
         }
-
+        
+        const start = new Date(`${startDateInput.value}T${startTimeInput.value}`);
+        const end = new Date(`${endDateInput.value}T${endTimeInput.value}`);
+        
+        if (end < start) {
+            breakdown.style.display = 'none';
+            discountCard.style.display = 'none';
+            bookBtn.setAttribute('disabled', 'disabled');
+            return;
+        }
+        
         const diffTime = Math.abs(end - start);
         const diffHours = diffTime / (1000 * 60 * 60);
-        // Round up hours to the nearest day (so renting for 25 hours is 2 days)
-        const diffDays = Math.ceil(diffHours / 24);
-
-        if (diffDays > 0) {
-            const total = diffDays * dailyRate;
-            daysEl.textContent = `${diffDays} day` + (diffDays > 1 ? 's' : '');
-            totalEl.textContent = `$${total.toFixed(2)}`;
-            breakdown.style.display = 'block';
+        
+        const days = Math.floor(diffHours / 24);
+        const remainingHours = Math.ceil(diffHours % 24);
+        
+        // Dynamic pricing logic with tiered discounts
+        const dailyCost = days * dailyRate;
+        const rawHourlyCost = remainingHours * hourlyRate;
+        const hourlyCost = Math.min(rawHourlyCost, dailyRate);
+        const baseTotal = dailyCost + hourlyCost;
+        
+        let discountRate = 0;
+        let progressPercent = 0;
+        let progressMsg = "";
+        
+        const totalRentalDays = days + (remainingHours > 0 ? (remainingHours / 24) : 0);
+        
+        if (activePromos && activePromos.length > 0) {
+            // Sort activePromos descending by min_days to find the highest match
+            activePromos.sort((a, b) => b.min_days - a.min_days);
+            let matchedPromo = activePromos.find(p => totalRentalDays >= p.min_days);
+            if (matchedPromo) {
+                discountRate = parseFloat(matchedPromo.percentage) / 100.0;
+            }
+            
+            // Sort activePromos ascending by min_days to find the next milestone
+            activePromos.sort((a, b) => a.min_days - b.min_days);
+            let nextPromo = activePromos.find(p => totalRentalDays < p.min_days);
+            
+            if (matchedPromo && !nextPromo) {
+                progressPercent = 100;
+                progressMsg = `🎉 Awesome! You unlocked the maximum **${matchedPromo.percentage}% Discount**!`;
+            } else if (nextPromo) {
+                const currentMinDays = matchedPromo ? matchedPromo.min_days : 0;
+                const range = nextPromo.min_days - currentMinDays;
+                const progress = ((totalRentalDays - currentMinDays) / range) * 100;
+                progressPercent = Math.min(Math.max(progress, 15), 95);
+                const daysToNext = nextPromo.min_days - totalRentalDays;
+                
+                if (matchedPromo) {
+                    progressMsg = `🔥 **${matchedPromo.percentage}% Discount applied!** Rent for **${daysToNext.toFixed(1).replace('.0', '')} more days** to unlock the **${nextPromo.percentage}% Discount**!`;
+                } else {
+                    progressMsg = `⚡ Rent for **${daysToNext.toFixed(1).replace('.0', '')} more days** to unlock the **${nextPromo.percentage}% Discount**!`;
+                }
+            }
+        } else {
+            // No discounts exist at all
+            discountRate = 0;
+            progressPercent = 0;
+        }
+        
+        const discountAmount = baseTotal * discountRate;
+        const total = baseTotal - discountAmount;
+        
+        if (total > 0) {
+            let durationParts = [];
+            if (days > 0) durationParts.push(`${days} day${days > 1 ? 's' : ''}`);
+            if (remainingHours > 0) durationParts.push(`${remainingHours} hour${remainingHours > 1 ? 's' : ''}`);
+            daysEl.textContent = durationParts.join(', ') || '0 hours';
+            
+            let detailHTML = '';
+            if (days > 0) {
+                detailHTML += `<div style="display:flex; justify-content:space-between;">
+                    <span>Daily base fare (${days} x ₹${dailyRate.toFixed(2)}):</span>
+                    <span>₹${dailyCost.toFixed(2)}</span>
+                </div>`;
+            }
+            if (remainingHours > 0) {
+                if (rawHourlyCost > dailyRate) {
+                    detailHTML += `<div style="display:flex; justify-content:space-between; color:var(--primary);">
+                        <span>Extra hours (${remainingHours} hrs @ ₹${hourlyRate.toFixed(2)} - Capped):</span>
+                        <span>₹${dailyRate.toFixed(2)}</span>
+                    </div>`;
+                } else {
+                    detailHTML += `<div style="display:flex; justify-content:space-between;">
+                        <span>Extra hours (${remainingHours} x ₹${hourlyRate.toFixed(2)}):</span>
+                        <span>₹${rawHourlyCost.toFixed(2)}</span>
+                    </div>`;
+                }
+            }
+            
+            if (discountRate > 0) {
+                detailHTML += `<div style="display:flex; justify-content:space-between; color:var(--success); font-weight:600; padding-top:4px; border-top:1px dashed rgba(16,185,129,0.2);">
+                    <span>Discount (${(discountRate * 100)}%):</span>
+                    <span>-₹${discountAmount.toFixed(2)}</span>
+                </div>`;
+            }
+            
+            detailsEl.innerHTML = detailHTML || `<span>Standard rate applied</span>`;
+            totalEl.textContent = `₹${total.toFixed(2)}`;
+            breakdown.style.display = 'flex';
+            
+            // Render smart discount card
+            discountBadge.textContent = `${(discountRate * 100)}% OFF`;
+            discountProgress.style.width = `${progressPercent}%`;
+            discountMsg.innerHTML = progressMsg;
+            discountCard.style.display = 'flex';
+            
             bookBtn.removeAttribute('disabled');
         } else {
             breakdown.style.display = 'none';
+            discountCard.style.display = 'none';
+            bookBtn.setAttribute('disabled', 'disabled');
         }
     }
-
+    
+    // Slider Setup
     let currentSlideIndex = 0;
     const slidesCount = parseInt("{{ car.images.count|default:1 }}");
-
+    
     function updateSlider() {
         const wrapper = document.getElementById('slider-wrapper');
         if (wrapper) {
             wrapper.style.transform = `translateX(-${currentSlideIndex * 100}%)`;
         }
-        
         const dots = document.querySelectorAll('.slider-dot');
         dots.forEach((dot, index) => {
             if (index === currentSlideIndex) {
@@ -275,7 +682,7 @@
             }
         });
     }
-
+    
     function moveSlide(direction) {
         currentSlideIndex += direction;
         if (currentSlideIndex >= slidesCount) {
@@ -285,7 +692,7 @@
         }
         updateSlider();
     }
-
+    
     function currentSlide(index) {
         currentSlideIndex = index;
         updateSlider();

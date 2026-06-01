@@ -33,11 +33,89 @@
         <div class="glass-card stat-card">
             <div class="stat-info">
                 <h4>Total Spent</h4>
-                <p>${{ total_spent }}</p>
+                <p>₹{{ total_spent|floatformat:2 }}</p>
             </div>
             <i class="fa-solid fa-wallet stat-icon"></i>
         </div>
     </div>
+
+    <!-- Active Deals & Promotions deck -->
+    {% if active_discounts %}
+        <div class="glass-card" style="margin-bottom:40px; background: linear-gradient(135deg, var(--bg-card) 0%, rgba(236, 72, 153, 0.02) 100%);">
+            <h3 style="font-size:1.4rem; font-weight:800; border-bottom:1px solid var(--border-color); padding-bottom:12px; margin-bottom:20px;">
+                <i class="fa-solid fa-fire-flame-curved" style="color:var(--accent);"></i> Hot Deals & Active Promotions
+            </h3>
+            
+            <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap:20px;">
+                {% for promo in active_discounts %}
+                    <div class="glass-card" style="padding:15px; border-radius:12px; display:flex; flex-direction:column; gap:12px; background:rgba(0,0,0,0.15); transition:var(--transition); border-color:var(--border-color); {% if not promo.car_currently_available %}opacity:0.85;{% endif %}" onmouseover="this.style.transform='translateY(-3px)'; this.style.borderColor='var(--border-color-hover)'" onmouseout="this.style.transform='translateY(0)'; this.style.borderColor='var(--border-color)'">
+                        <div style="position:relative; height:120px; overflow:hidden; border-radius:8px;">
+                            {% if promo.car.image %}
+                                <img src="{{ promo.car.image.url }}" alt="" style="width:100%; height:100%; object-fit:cover;">
+                            {% else %}
+                                <div style="width:100%; height:100%; background:rgba(255,255,255,0.03); display:flex; justify-content:center; align-items:center; color:var(--text-muted);">
+                                    <i class="fa-solid fa-car fa-2x"></i>
+                                </div>
+                            {% endif %}
+                            
+                            <!-- Overlapping Rented Status Badge -->
+                            {% if not promo.car_currently_available %}
+                                <span class="badge badge-rejected" style="position:absolute; top:8px; left:8px; font-weight:800; font-size:0.72rem; background:#EF4444; border-color:#EF4444; color:white; box-shadow:0 0 10px rgba(239, 68, 68, 0.4); text-transform:none;">
+                                    Currently Rented
+                                </span>
+                            {% endif %}
+                            
+                            <span class="badge badge-approved" style="position:absolute; top:8px; right:8px; font-weight:800; font-size:0.75rem; background:var(--accent); border-color:var(--accent); color:white; box-shadow:0 0 10px var(--accent-glow); text-transform:none;">
+                                {{ promo.discount_percentage }}% OFF
+                            </span>
+                        </div>
+                        
+                        <div>
+                            <span style="font-weight:700; font-size:1.05rem; display:block; color:var(--text-main);">
+                                {{ promo.car.brand }} {{ promo.car.model }}
+                            </span>
+                            <span style="font-size:0.75rem; color:var(--text-muted); display:block; margin:2px 0;">
+                                <i class="fa-solid fa-map-marker-alt"></i> {{ promo.car.location }}
+                            </span>
+                            <span style="font-size:0.75rem; color:var(--text-muted); display:block;">
+                                Active for rentals of **{{ promo.min_days }}+ days**
+                            </span>
+                            
+                            <!-- Real-time Availability & Formatted Calendar Dates -->
+                            <div style="font-size:0.75rem; display:block; margin:8px 0 2px 0; line-height:1.4;">
+                                {% if promo.car_currently_available %}
+                                    <span style="color:#10B981; font-weight:600;"><i class="fa-solid fa-calendar-check"></i> {{ promo.availability_text }}</span>
+                                {% else %}
+                                    <span style="color:#F59E0B; font-weight:600;"><i class="fa-solid fa-calendar-xmark"></i> {{ promo.availability_text }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid rgba(255,255,255,0.05); padding-top:10px; margin-top:auto;">
+                            <div>
+                                <span style="font-size:0.75rem; color:var(--text-muted); text-decoration:line-through; display:block; height:14px; line-height:1;">
+                                    ₹{{ promo.car.daily_rate }}/d
+                                </span>
+                                <span style="font-size:1.15rem; font-weight:800; color:var(--success);">
+                                    ₹{{ promo.get_discounted_rate|floatformat:2 }}<span style="font-size:0.7rem; font-weight:normal; color:var(--text-muted);">/d</span>
+                                </span>
+                            </div>
+                            
+                            {% if promo.car_currently_available %}
+                                <a href="{% url 'car_detail' promo.car.id %}" class="btn btn-primary btn-sm" style="padding:6px 12px; font-size:0.75rem; font-weight:700;">
+                                    <i class="fa-solid fa-bolt"></i> Book Deal
+                                </a>
+                            {% else %}
+                                <button class="btn btn-secondary btn-sm" disabled style="padding:6px 12px; font-size:0.75rem; font-weight:700; opacity:0.6; cursor:not-allowed; border-color:var(--border-color);">
+                                    <i class="fa-solid fa-ban"></i> Unavailable
+                                </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
 
     <div class="dashboard-container" style="grid-template-columns: 1fr 350px;">
         <!-- Left: Rental History -->
@@ -71,7 +149,7 @@
                                     {{ booking.start_date }} <br>
                                     <span style="color:var(--text-muted);">to</span> {{ booking.end_date }}
                                 </td>
-                                <td style="font-weight:600; color:var(--primary);">${{ booking.total_price }}</td>
+                                <td style="font-weight:600; color:var(--primary);">₹{{ booking.total_price|floatformat:2 }}</td>
                                 <td>
                                     {% if booking.status == 'PENDING' %}
                                         <span class="badge badge-pending">Pending Vendor</span>

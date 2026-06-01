@@ -62,6 +62,7 @@ class Car(models.Model):
     fuel_type = models.CharField(max_length=15, choices=(('PETROL', 'Petrol'), ('DIESEL', 'Diesel'), ('ELECTRIC', 'Electric'), ('HYBRID', 'Hybrid')), default='PETROL')
     seats = models.PositiveIntegerField(default=5)
     daily_rate = models.DecimalField(max_digits=8, decimal_places=2, validators=[MinValueValidator(0.0)])
+    hourly_rate = models.DecimalField(max_digits=8, decimal_places=2, validators=[MinValueValidator(0.0)], default=0.0)
     location = models.CharField(max_length=100)
     image = models.ImageField(upload_to='cars/')
     document = models.FileField(upload_to='car_docs/', blank=True, null=True)
@@ -71,6 +72,13 @@ class Car(models.Model):
 
     def __str__(self):
         return f"{self.brand} {self.model} ({self.year})"
+
+    @property
+    def get_hourly_rate(self):
+        if self.hourly_rate and self.hourly_rate > 0:
+            return self.hourly_rate
+        from decimal import Decimal
+        return Decimal(round(float(self.daily_rate) / 24, 2))
 
 class Booking(models.Model):
     STATUS_CHOICES = (
@@ -93,6 +101,12 @@ class Booking(models.Model):
     status = models.CharField(max_length=15, choices=STATUS_CHOICES, default='PENDING')
     payment_status = models.CharField(max_length=15, choices=PAYMENT_STATUS_CHOICES, default='PENDING')
     created_at = models.DateTimeField(default=timezone.now)
+    
+    # Self-drive verification and logging
+    license_front = models.ImageField(upload_to='licenses/', blank=True, null=True)
+    license_back = models.ImageField(upload_to='licenses/', blank=True, null=True)
+    signature = models.ImageField(upload_to='signatures/', blank=True, null=True)
+    damage_report = models.TextField(blank=True, null=True)
 
     def __str__(self):
         return f"Booking #{self.id} - {self.customer.username} for {self.car}"
@@ -138,3 +152,32 @@ class CarImage(models.Model):
 
     def __str__(self):
         return f"Image for {self.car.brand} {self.car.model}"
+
+class Discount(models.Model):
+    STATUS_CHOICES = (
+        ('PENDING_VENDOR', 'Pending Vendor Acceptance'),
+        ('APPROVED', 'Active'),
+        ('REJECTED', 'Rejected'),
+    )
+    car = models.ForeignKey(Car, on_delete=models.CASCADE, related_name='discounts')
+    discount_percentage = models.PositiveIntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(100)]
+    )
+    min_days = models.PositiveIntegerField(default=1)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING_VENDOR')
+    created_by = models.CharField(
+        max_length=15, 
+        choices=(('ADMIN', 'Admin'), ('VENDOR', 'Vendor')), 
+        default='VENDOR'
+    )
+    created_at = models.DateTimeField(default=timezone.now)
+
+    def __str__(self):
+        return f"{self.discount_percentage}% off {self.car} (Min {self.min_days} days) - {self.status}"
+
+    @property
+    def get_discounted_rate(self):
+        from decimal import Decimal
+        pct = Decimal(self.discount_percentage) / Decimal('100.0')
+        return round(self.car.daily_rate * (Decimal('1.0') - pct), 2)
+

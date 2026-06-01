@@ -62,14 +62,18 @@
                 </div>
             </div>
 
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
+            <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:15px;">
                 <div class="form-group">
                     <label for="seats">Seats</label>
                     <input type="number" id="seats" name="seats" class="form-control" value="{{ car.seats }}" min="1" required>
                 </div>
                 <div class="form-group">
-                    <label for="daily_rate">Daily Rate ($)</label>
+                    <label for="daily_rate">Daily Rate (₹)</label>
                     <input type="number" id="daily_rate" name="daily_rate" class="form-control" value="{{ car.daily_rate }}" step="0.01" min="0" required>
+                </div>
+                <div class="form-group">
+                    <label for="hourly_rate">Hourly Rate (₹) <span style="font-size:0.7rem; color:var(--text-muted); text-transform:none;">(Opt.)</span></label>
+                    <input type="number" id="hourly_rate" name="hourly_rate" class="form-control" value="{{ car.hourly_rate|floatformat:2 }}" step="0.01" min="0">
                 </div>
             </div>
 

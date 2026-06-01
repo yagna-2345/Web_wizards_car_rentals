@@ -17,8 +17,11 @@
     <header>
         <div class="container navbar">
             <a href="{% url 'home' %}" class="logo">
-                <i class="fa-solid fa-wand-magic-sparkles"></i> Web Wizards Car Rentals
+                Web Wizards Car Rentals
             </a>
+            <button class="mobile-nav-toggle" id="mobile-nav-toggle" aria-label="Toggle Navigation">
+                <i class="fa-solid fa-bars"></i>
+            </button>
             <ul class="nav-links">
                 <li><a href="{% url 'home' %}" class="{% if request.resolver_match.url_name == 'home' %}active{% endif %}">Home</a></li>
                 <li><a href="{% url 'car_search' %}" class="{% if request.resolver_match.url_name == 'car_search' %}active{% endif %}">Cars for Rent</a></li>
@@ -75,5 +78,73 @@
     </footer>
 
     {% block extra_js %}{% endblock %}
+
+    <!-- Global Glassmorphic Loader Overlay -->
+    <div id="global-loader" class="global-loader-overlay">
+        <div class="loader-spinner"></div>
+        <p class="loader-text" id="loader-message">Processing your request... Please wait.</p>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- Mobile Navigation Menu Drawer Toggle ---
+            const mobileToggle = document.getElementById('mobile-nav-toggle');
+            const navLinks = document.querySelector('.nav-links');
+
+            if (mobileToggle && navLinks) {
+                mobileToggle.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    navLinks.classList.toggle('active');
+                    const isOpen = navLinks.classList.contains('active');
+                    mobileToggle.innerHTML = isOpen ? '<i class="fa-solid fa-times"></i>' : '<i class="fa-solid fa-bars"></i>';
+                });
+
+                // Close mobile menu when clicking outside
+                document.addEventListener('click', (e) => {
+                    if (navLinks.classList.contains('active') && !navLinks.contains(e.target) && !mobileToggle.contains(e.target)) {
+                        navLinks.classList.remove('active');
+                        mobileToggle.innerHTML = '<i class="fa-solid fa-bars"></i>';
+                    }
+                });
+            }
+
+            // --- Form Submit Interception with Glassmorphic Loader ---
+            const loader = document.getElementById('global-loader');
+            const loaderMessage = document.getElementById('loader-message');
+            const forms = document.querySelectorAll('form');
+
+            forms.forEach(form => {
+                form.addEventListener('submit', (e) => {
+                    // Check action, method and submit button to confirm target actions (login, register, book, checkout)
+                    const action = form.getAttribute('action') || '';
+                    const submitBtn = form.querySelector('button[type="submit"]');
+                    const btnText = submitBtn ? submitBtn.textContent.toLowerCase() : '';
+
+                    let shouldShowLoader = false;
+                    let message = 'Processing your request... Please wait.';
+
+                    if (action.includes('login') || btnText.includes('login')) {
+                        shouldShowLoader = true;
+                        message = 'Securing your connection & authenticating...';
+                    } else if (action.includes('book') || btnText.includes('book') || btnText.includes('checkout') || btnText.includes('proceed')) {
+                        shouldShowLoader = true;
+                        message = 'Processing your booking reservation... Please wait.';
+                    } else if (action.includes('register') || btnText.includes('register') || btnText.includes('sign up')) {
+                        shouldShowLoader = true;
+                        message = 'Creating your account profile... Please wait.';
+                    } else if (action.includes('verify') || btnText.includes('verify')) {
+                        shouldShowLoader = true;
+                        message = 'Verifying security codes... Please wait.';
+                    }
+
+                    // Ensure the form is valid before showing loader (respect native HTML5 validation)
+                    if (shouldShowLoader && form.checkValidity()) {
+                        loaderMessage.textContent = message;
+                        loader.classList.add('active');
+                    }
+                });
+            });
+        });
+    </script>
 </body>
 </html>
