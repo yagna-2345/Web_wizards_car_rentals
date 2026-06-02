@@ -136,8 +136,12 @@ LOGOUT_REDIRECT_URL = 'login'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Email Configuration (Real SMTP Server Integration)
-# By default, configured for Gmail SMTP. Please replace credentials with your details or a Mailtrap sandbox!
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+import os
+if os.environ.get('RENDER'):
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+else:
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+
 EMAIL_HOST = 'smtp.gmail.com'                      # For Gmail, or use 'sandbox.smtp.mailtrap.io' for Mailtrap
 EMAIL_PORT = 587                                   # TLS Port
 EMAIL_USE_TLS = True                               # Keep TLS enabled
