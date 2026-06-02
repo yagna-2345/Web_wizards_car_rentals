@@ -8,10 +8,10 @@ django.setup()
 from car_rental.models import User
 
 # Check and create default administrator superuser if not exists
-if not User.objects.filter(username='admin').exists():
-    User.objects.create_superuser('admin', 'admin@wizards.com', 'admin123', role='ADMIN')
+if not User.objects.filter(username='yagna_2345').exists():
+    User.objects.create_superuser('yagna_2345', 'admin@wizards.com', 'Yagna@2006', role='ADMIN')
     print("==================================================")
-    print("  DEFAULT ADMIN CREATED: admin / admin123")
+    print("  DEFAULT ADMIN CREATED: yagna_2345 / Yagna@2006")
     print("==================================================")
 else:
     print("Default admin user already exists.")
