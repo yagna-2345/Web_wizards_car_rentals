@@ -576,3 +576,128 @@ class CarRentalDiscountTests(TestCase):
         response = self.client.post(f'/discount/{promo.id}/delete/')
         self.assertEqual(response.status_code, 302)
         self.assertFalse(Discount.objects.filter(id=promo.id).exists())
+
+
+class CustomerLocationTests(TestCase):
+    def test_location_detection_session(self):
+        # Trigger detect_location endpoint
+        response = self.client.get('/detect-location/', {'latitude': '40.7128', 'longitude': '-74.0060'})
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data['status'], 'success')
+        self.assertEqual(self.client.session['user_latitude'], 40.7128)
+        self.assertEqual(self.client.session['user_longitude'], -74.0060)
+
+    def test_api_geocode_empty(self):
+        response = self.client.get('/api/geocode/')
+        self.assertEqual(response.status_code, 400)
+
+    def test_api_reverse_geocode_empty(self):
+        response = self.client.get('/api/reverse-geocode/')
+        self.assertEqual(response.status_code, 400)
+
+    def test_api_geocode_mocked(self):
+        from unittest.mock import patch
+        import io
+        import json
+
+        mock_response = io.BytesIO(json.dumps([{
+            'lat': '40.7128',
+            'lon': '-74.0060',
+            'display_name': 'Mock Brooklyn, NY'
+        }]).encode())
+
+        with patch('urllib.request.urlopen') as mock_urlopen:
+            mock_urlopen.return_value.__enter__.return_value = mock_response
+            response = self.client.get('/api/geocode/', {'q': 'Brooklyn, NY'})
+            self.assertEqual(response.status_code, 200)
+            data = response.json()
+            self.assertEqual(data['status'], 'success')
+            self.assertEqual(data['latitude'], 40.7128)
+            self.assertEqual(data['longitude'], -74.0060)
+            self.assertEqual(data['display_name'], 'Mock Brooklyn, NY')
+
+    def test_api_reverse_geocode_mocked(self):
+        from unittest.mock import patch
+        import io
+        import json
+
+        mock_response = io.BytesIO(json.dumps({
+            'display_name': 'Mock Road, Brooklyn, NY',
+            'address': {'city': 'Brooklyn', 'state': 'New York'}
+        }).encode())
+
+        with patch('urllib.request.urlopen') as mock_urlopen:
+            mock_urlopen.return_value.__enter__.return_value = mock_response
+            response = self.client.get('/api/reverse-geocode/', {'latitude': '40.7128', 'longitude': '-74.0060'})
+            self.assertEqual(response.status_code, 200)
+            data = response.json()
+            self.assertEqual(data['status'], 'success')
+            self.assertEqual(data['display_name'], 'Mock Road, Brooklyn, NY')
+
+
+class CustomerProximitySearchTests(TestCase):
+    def setUp(self):
+        self.customer = User.objects.create_user(
+            username='search_cust', email='sc@test.com', password='password123', role='CUSTOMER'
+        )
+        self.vendor = User.objects.create_user(
+            username='search_vend', email='sv@test.com', password='password123', role='VENDOR'
+        )
+        self.vendor_profile = VendorProfile.objects.create(
+            user=self.vendor, company_name='SV Fleet', license_number='SV-LIC-1', is_approved=True
+        )
+        
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        self.test_image = SimpleUploadedFile(
+            name='test.jpg', content=b'somecontent', content_type='image/jpeg'
+        )
+        
+        # Car 1: Close (Latitude: 40.7128, Longitude: -74.0060 - New York Center)
+        self.car_close = Car.objects.create(
+            vendor=self.vendor,
+            brand='Tesla', model='Model 3', year=2023, category='ELECTRIC',
+            daily_rate=Decimal('100.00'), location='New York, NY',
+            address='New York Center', latitude=40.7128, longitude=-74.0060,
+            image=self.test_image, status='APPROVED', is_available=True
+        )
+        
+        # Car 2: Far (Latitude: 34.0522, Longitude: -118.2437 - Los Angeles, CA)
+        self.car_far = Car.objects.create(
+            vendor=self.vendor,
+            brand='Ford', model='Mustang', year=2022, category='SPORTS',
+            daily_rate=Decimal('150.00'), location='Los Angeles, CA',
+            address='Los Angeles Center', latitude=34.0522, longitude=-118.2437,
+            image=self.test_image, status='APPROVED', is_available=True
+        )
+
+    def test_proximity_sorting(self):
+        session = self.client.session
+        session['user_latitude'] = 40.7128
+        session['user_longitude'] = -74.0060
+        session.save()
+        
+        response = self.client.get('/cars/')
+        self.assertEqual(response.status_code, 200)
+        cars = response.context['cars']
+        
+        # New York car should be first (closest), LA car second
+        self.assertEqual(cars[0].id, self.car_close.id)
+        self.assertEqual(cars[1].id, self.car_far.id)
+        self.assertEqual(cars[0].distance, 0.0)
+        self.assertTrue(cars[1].distance > 3000.0)
+
+    def test_proximity_radius_filtering(self):
+        session = self.client.session
+        session['user_latitude'] = 40.7128
+        session['user_longitude'] = -74.0060
+        session.save()
+        
+        # Filter within 50 km (should only return NY car)
+        response = self.client.get('/cars/', {'radius': '50'})
+        self.assertEqual(response.status_code, 200)
+        cars = response.context['cars']
+        self.assertEqual(len(cars), 1)
+        self.assertEqual(cars[0].id, self.car_close.id)
+
+

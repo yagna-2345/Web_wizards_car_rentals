@@ -27,6 +27,7 @@ urlpatterns = [
     
     # Customer Booking & Checkout Actions
     path('cars/', views.car_search, name='car_search'),
+    path('detect-location/', views.detect_location, name='detect_location'),
     path('car/<int:car_id>/', views.car_detail, name='car_detail'),
     path('car/<int:car_id>/book/', views.book_car, name='book_car'),
     path('booking/<int:booking_id>/checkout/', views.payment_checkout, name='payment_checkout'),
@@ -48,4 +49,9 @@ urlpatterns = [
     path('discount/admin/add/', views.admin_add_discount, name='admin_add_discount'),
     path('discount/<int:discount_id>/respond/<str:action>/', views.vendor_respond_discount, name='vendor_respond_discount'),
     path('discount/<int:discount_id>/delete/', views.delete_discount, name='delete_discount'),
+    
+    # Proxy Geocoding APIs
+    path('api/geocode/', views.api_geocode, name='api_geocode'),
+    path('api/reverse-geocode/', views.api_reverse_geocode, name='api_reverse_geocode'),
 ]
+

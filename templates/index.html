@@ -66,7 +66,14 @@
                     <div class="car-card-header">
                         <div class="car-card-title">
                             <h3>{{ car.brand }} {{ car.model }}</h3>
-                            <p><i class="fa-solid fa-map-marker-alt"></i> {{ car.location }}</p>
+                            <p>
+                                <i class="fa-solid fa-map-marker-alt"></i> {{ car.location }}
+                                {% if car.distance is not None %}
+                                    <span style="color: var(--primary); font-weight: 600; margin-left: 8px;">
+                                        <i class="fa-solid fa-location-arrow" style="font-size: 0.75rem;"></i> {{ car.distance }} km
+                                    </span>
+                                {% endif %}
+                             </p>
                         </div>
                         <span class="car-price">₹{{ car.daily_rate }}<span>/day</span></span>
                     </div>

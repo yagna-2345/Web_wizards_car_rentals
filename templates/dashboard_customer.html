@@ -2,6 +2,19 @@
 
 {% block title %}Customer Dashboard - Web Wizards Car Rentals{% endblock %}
 
+{% block extra_head %}
+<style>
+    @keyframes pulse-loc {
+        0% { transform: scale(1); opacity: 0.8; }
+        50% { transform: scale(1.15); opacity: 1; }
+        100% { transform: scale(1); opacity: 0.8; }
+    }
+    .pulse-animation {
+        animation: pulse-loc 1.8s infinite ease-in-out;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container" style="padding: 40px 0;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:40px;">
@@ -12,6 +25,28 @@
         <a href="{% url 'edit_profile' %}" class="btn btn-secondary btn-sm" style="display:flex; align-items:center; gap:8px; text-decoration:none;">
             <i class="fa-solid fa-user-pen"></i> Edit Profile
         </a>
+    </div>
+
+    <!-- Real-time Location Detection Banner -->
+    <div id="location-detection-card" class="glass-card" style="margin-bottom: 40px; display: flex; align-items: center; justify-content: space-between; padding: 20px; border-color: rgba(79, 70, 229, 0.2); background: linear-gradient(135deg, var(--bg-card) 0%, rgba(79, 70, 229, 0.02) 100%); flex-wrap: wrap; gap: 15px;">
+        <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+            <div id="loc-icon-container" style="width: 50px; height: 50px; border-radius: 50%; background: var(--primary-glow); border: 1px solid var(--primary); display: flex; justify-content: center; align-items: center; flex-shrink: 0;">
+                <i id="loc-icon" class="fa-solid fa-location-crosshairs fa-lg" style="color: white;"></i>
+            </div>
+            <div>
+                <h4 style="font-size: 1rem; font-weight: 700; margin-bottom: 4px;">Detected Customer Location</h4>
+                <p id="loc-status-text" style="color: var(--text-muted); font-size: 0.9rem; margin: 0;">
+                    {% if request.session.user_address %}
+                        📍 <strong>{{ request.session.user_address }}</strong> (coords: {{ request.session.user_latitude|floatformat:4 }}, {{ request.session.user_longitude|floatformat:4 }})
+                    {% else %}
+                        Detecting your current location to customize your experience...
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+        <button type="button" id="force-detect-btn" class="btn btn-secondary btn-sm" style="font-size: 0.8rem; display: flex; align-items: center; gap: 6px; height: 38px;">
+            <i class="fa-solid fa-arrows-rotate"></i> Update Location
+        </button>
     </div>
 
     <!-- Stats Row -->
@@ -311,5 +346,63 @@
     function closeReviewModal() {
         document.getElementById('review-modal').style.display = 'none';
     }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const statusText = document.getElementById('loc-status-text');
+        const forceBtn = document.getElementById('force-detect-btn');
+        const icon = document.getElementById('loc-icon');
+        
+        function detectLocation(showFeedback = false) {
+            if (showFeedback && statusText) {
+                statusText.textContent = "Requesting location permissions...";
+            }
+            if (icon) icon.classList.add('pulse-animation');
+            
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition((position) => {
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+                    
+                    fetch(`/detect-location/?latitude=${lat}&longitude=${lon}`)
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.status === 'success') {
+                                if (statusText) {
+                                    statusText.innerHTML = `📍 <strong>${data.address}</strong> (coords: ${lat.toFixed(4)}, ${lon.toFixed(4)})`;
+                                }
+                            } else {
+                                if (statusText) statusText.textContent = "Error: " + data.message;
+                            }
+                            if (icon) icon.classList.remove('pulse-animation');
+                        })
+                        .catch(err => {
+                            if (statusText) statusText.textContent = "Failed to communicate with location service.";
+                            if (icon) icon.classList.remove('pulse-animation');
+                            console.error(err);
+                        });
+                }, (error) => {
+                    if (statusText) {
+                        statusText.textContent = "Location access denied. Please enable location permissions in your browser.";
+                    }
+                    if (icon) icon.classList.remove('pulse-animation');
+                });
+            } else {
+                if (statusText) statusText.textContent = "Geolocation is not supported by your browser.";
+                if (icon) icon.classList.remove('pulse-animation');
+            }
+        }
+        
+        // Trigger automatically if location is not saved in session
+        const hasStoredLocation = {% if request.session.user_latitude %}true{% else %}false{% endif %};
+        if (!hasStoredLocation) {
+            detectLocation(false);
+        }
+        
+        if (forceBtn) {
+            forceBtn.addEventListener('click', () => {
+                detectLocation(true);
+            });
+        }
+    });
 </script>
 {% endblock %}

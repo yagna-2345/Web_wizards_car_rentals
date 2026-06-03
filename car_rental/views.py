@@ -4,9 +4,12 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Sum
 from django.utils import timezone
+from django.http import JsonResponse
 from datetime import datetime
 import uuid
 import random
+import json
+import urllib.request
 from django.core.mail import send_mail
 from django.conf import settings
 
@@ -15,7 +18,28 @@ from .models import User, VendorProfile, CustomerProfile, Car, Booking, Payment,
 # Home / Landing view
 def home(request):
     featured_cars = Car.objects.filter(status='APPROVED', is_available=True)[:6]
-    return render(request, 'index.html', {'featured_cars': featured_cars})
+    
+    lat = request.session.get('user_latitude')
+    lon = request.session.get('user_longitude')
+    
+    car_list = list(featured_cars)
+    if lat is not None and lon is not None:
+        import math
+        for car in car_list:
+            if car.latitude is not None and car.longitude is not None:
+                R = 6371.0
+                dlat = math.radians(car.latitude - lat)
+                dlon = math.radians(car.longitude - lon)
+                a = math.sin(dlat / 2)**2 + math.cos(math.radians(lat)) * math.cos(math.radians(car.latitude)) * math.sin(dlon / 2)**2
+                c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+                car.distance = round(R * c, 1)
+            else:
+                car.distance = None
+    else:
+        for car in car_list:
+            car.distance = None
+            
+    return render(request, 'index.html', {'featured_cars': car_list})
 
 # Custom Registration
 def register_view(request):
@@ -293,11 +317,24 @@ def add_car(request):
         daily_rate = request.POST.get('daily_rate')
         hourly_rate = request.POST.get('hourly_rate')
         location = request.POST.get('location')
+        address = request.POST.get('address')
+        latitude = request.POST.get('latitude')
+        longitude = request.POST.get('longitude')
         images = request.FILES.getlist('images')
         document = request.FILES.get('document')
 
         if not hourly_rate or float(hourly_rate) <= 0:
             hourly_rate = round(float(daily_rate) / 24, 2)
+
+        try:
+            lat = float(latitude) if latitude else None
+        except ValueError:
+            lat = None
+
+        try:
+            lon = float(longitude) if longitude else None
+        except ValueError:
+            lon = None
 
         cover_image = images[0] if images else None
 
@@ -313,6 +350,9 @@ def add_car(request):
             daily_rate=daily_rate,
             hourly_rate=hourly_rate,
             location=location,
+            address=address,
+            latitude=lat,
+            longitude=lon,
             image=cover_image,
             document=document,
             status='PENDING', # Requires Admin verification
@@ -347,6 +387,7 @@ def car_search(request):
     category = request.GET.get('category')
     transmission = request.GET.get('transmission')
     max_price = request.GET.get('max_price')
+    radius = request.GET.get('radius')
 
     # Only approved and available cars
     cars = Car.objects.filter(status='APPROVED')
@@ -360,7 +401,52 @@ def car_search(request):
     if max_price:
         cars = cars.filter(daily_rate__lte=max_price)
 
-    return render(request, 'car_search.html', {'cars': cars})
+    # Proximity Sorting and Filtering based on Customer Coordinates
+    user_lat = request.GET.get('latitude') or request.session.get('user_latitude')
+    user_lon = request.GET.get('longitude') or request.session.get('user_longitude')
+    
+    lat = None
+    lon = None
+    if user_lat and user_lon:
+        try:
+            lat = float(user_lat)
+            lon = float(user_lon)
+            # Store in session if not already there or changed
+            request.session['user_latitude'] = lat
+            request.session['user_longitude'] = lon
+        except ValueError:
+            pass
+
+    car_list = list(cars)
+    if lat is not None and lon is not None:
+        import math
+        for car in car_list:
+            if car.latitude is not None and car.longitude is not None:
+                # Haversine distance formula
+                R = 6371.0
+                dlat = math.radians(car.latitude - lat)
+                dlon = math.radians(car.longitude - lon)
+                a = math.sin(dlat / 2)**2 + math.cos(math.radians(lat)) * math.cos(math.radians(car.latitude)) * math.sin(dlon / 2)**2
+                c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+                car.distance = round(R * c, 1)
+            else:
+                car.distance = None
+
+        # Filter by radius if selected
+        if radius:
+            try:
+                rad_val = float(radius)
+                car_list = [c for c in car_list if c.distance is not None and c.distance <= rad_val]
+            except ValueError:
+                pass
+
+        # Sort closest first, with None distance cars at the end
+        car_list.sort(key=lambda x: (x.distance is None, x.distance))
+    else:
+        for car in car_list:
+            car.distance = None
+
+    return render(request, 'car_search.html', {'cars': car_list})
 
 # Car Detail Page
 def car_detail(request, car_id):
@@ -801,6 +887,19 @@ def edit_car(request, car_id):
             hourly_rate = round(float(car.daily_rate) / 24, 2)
         car.hourly_rate = hourly_rate
         car.location = request.POST.get('location')
+        car.address = request.POST.get('address')
+        
+        latitude = request.POST.get('latitude')
+        longitude = request.POST.get('longitude')
+        try:
+            car.latitude = float(latitude) if latitude else None
+        except ValueError:
+            car.latitude = None
+            
+        try:
+            car.longitude = float(longitude) if longitude else None
+        except ValueError:
+            car.longitude = None
 
         # Handle optional new document
         document = request.FILES.get('document')
@@ -1217,4 +1316,116 @@ def delete_discount(request, discount_id):
     discount.delete()
     messages.success(request, "Discount promotion successfully removed.")
     return redirect('dashboard')
+
+
+def detect_location(request):
+    latitude = request.GET.get('latitude') or request.POST.get('latitude')
+    longitude = request.GET.get('longitude') or request.POST.get('longitude')
+    
+    if not latitude or not longitude:
+        return JsonResponse({'status': 'error', 'message': 'Coordinates missing.'}, status=400)
+    
+    try:
+        lat = float(latitude)
+        lon = float(longitude)
+        request.session['user_latitude'] = lat
+        request.session['user_longitude'] = lon
+    except ValueError:
+        return JsonResponse({'status': 'error', 'message': 'Invalid coordinates.'}, status=400)
+    
+    address_display = "Detected Location"
+    url = f"https://nominatim.openstreetmap.org/reverse?format=json&lat={lat}&lon={lon}&zoom=12"
+    try:
+        req = urllib.request.Request(
+            url, 
+            headers={'User-Agent': 'WebWizardsCarRentals/1.0 (contact: admin@webwizardrentals.com)'}
+        )
+        with urllib.request.urlopen(req, timeout=3) as response:
+            data = json.loads(response.read().decode())
+            address_details = data.get('address', {})
+            city = address_details.get('city') or address_details.get('town') or address_details.get('village') or address_details.get('county')
+            state = address_details.get('state')
+            if city and state:
+                address_display = f"{city}, {state}"
+            elif city:
+                address_display = city
+            elif state:
+                address_display = state
+            else:
+                address_display = data.get('display_name', 'Detected Location')
+    except Exception as e:
+        print(f"Geocoding error: {e}")
+        pass
+        
+    request.session['user_address'] = address_display
+    
+    return JsonResponse({
+        'status': 'success', 
+        'latitude': lat, 
+        'longitude': lon, 
+        'address': address_display
+    })
+
+
+def api_geocode(request):
+    import urllib.parse
+    query = request.GET.get('q')
+    if not query:
+        return JsonResponse({'status': 'error', 'message': 'Query missing.'}, status=400)
+    
+    url = f"https://nominatim.openstreetmap.org/search?format=json&q={urllib.parse.quote(query)}&limit=1"
+    try:
+        req = urllib.request.Request(
+            url,
+            headers={'User-Agent': 'WebWizardsCarRentals/1.0 (contact: admin@webwizardrentals.com)'}
+        )
+        with urllib.request.urlopen(req, timeout=3) as response:
+            data = json.loads(response.read().decode())
+            if data:
+                result = data[0]
+                return JsonResponse({
+                    'status': 'success',
+                    'latitude': float(result.get('lat')),
+                    'longitude': float(result.get('lon')),
+                    'display_name': result.get('display_name')
+                })
+            else:
+                return JsonResponse({'status': 'error', 'message': 'Location not found.'}, status=404)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+def api_reverse_geocode(request):
+    latitude = request.GET.get('latitude')
+    longitude = request.GET.get('longitude')
+    if not latitude or not longitude:
+        return JsonResponse({'status': 'error', 'message': 'Coordinates missing.'}, status=400)
+    
+    try:
+        lat = float(latitude)
+        lon = float(longitude)
+    except ValueError:
+        return JsonResponse({'status': 'error', 'message': 'Invalid coordinates.'}, status=400)
+        
+    url = f"https://nominatim.openstreetmap.org/reverse?format=json&lat={lat}&lon={lon}&zoom=18"
+    try:
+        req = urllib.request.Request(
+            url,
+            headers={'User-Agent': 'WebWizardsCarRentals/1.0 (contact: admin@webwizardrentals.com)'}
+        )
+        with urllib.request.urlopen(req, timeout=3) as response:
+            data = json.loads(response.read().decode())
+            if data:
+                return JsonResponse({
+                    'status': 'success',
+                    'latitude': lat,
+                    'longitude': lon,
+                    'display_name': data.get('display_name'),
+                    'address': data.get('address', {})
+                })
+            else:
+                return JsonResponse({'status': 'error', 'message': 'Reverse geocoding failed.'}, status=404)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
 
