@@ -249,6 +249,44 @@ class CarRentalSystemTests(TestCase):
         self.assertIn("Payment Confirmation", mail.outbox[0].subject)
         self.assertIn(self.customer_user.email, mail.outbox[0].to)
 
+    def test_pay_on_visit_workflow(self):
+        from django.core import mail
+        # Create an approved pending-payment booking
+        booking = Booking.objects.create(
+            customer=self.customer_user,
+            car=self.car,
+            start_date=timezone.now(),
+            end_date=timezone.now() + timedelta(days=2),
+            total_price=Decimal('200.00'),
+            status='APPROVED',
+            payment_status='PENDING'
+        )
+
+        # Clear outbox
+        mail.outbox = []
+
+        # Customer logs in and completes booking via Pay on Visit
+        self.client.login(username='test_customer', password='password123')
+        response = self.client.post(f'/booking/{booking.id}/pay/', {
+            'payment_method': 'Pay on Visit'
+        })
+        
+        self.assertEqual(response.status_code, 302)
+        
+        # Verify Payment object creation
+        payment = Payment.objects.get(booking=booking)
+        self.assertEqual(payment.payment_method, 'Pay on Visit')
+        self.assertTrue(payment.transaction_id.startswith('POV-'))
+        
+        # Verify Booking status updated to PAID
+        booking.refresh_from_db()
+        self.assertEqual(booking.payment_status, 'PAID')
+        
+        # Verify confirmation email was sent with correct subject
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn("Booking Confirmation (Pay on Visit)", mail.outbox[0].subject)
+        self.assertIn(self.customer_user.email, mail.outbox[0].to)
+
     def test_user_registration_with_name(self):
         # Post registration with first_name
         response = self.client.post('/register/', {

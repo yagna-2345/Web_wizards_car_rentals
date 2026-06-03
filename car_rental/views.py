@@ -575,7 +575,11 @@ def payment_submit(request, booking_id):
     
     if request.method == 'POST':
         # Simulated payment completion
-        transaction_id = f"TXN-{uuid.uuid4().hex[:8].upper()}"
+        payment_method = request.POST.get('payment_method', 'Credit Card')
+        if payment_method == 'Pay on Visit':
+            transaction_id = f"POV-{uuid.uuid4().hex[:8].upper()}"
+        else:
+            transaction_id = f"TXN-{uuid.uuid4().hex[:8].upper()}"
         
         # Save License front/back images
         license_front_file = request.FILES.get('license_front')
@@ -609,29 +613,48 @@ def payment_submit(request, booking_id):
             booking=booking,
             transaction_id=transaction_id,
             amount=booking.total_price,
-            payment_method='Credit Card'
+            payment_method=payment_method
         )
 
         # Update booking
         booking.payment_status = 'PAID'
         booking.save()
 
-        # Send payment confirmation email to customer
-        subject = f"Payment Confirmation: Booking #{booking.id} - Web Wizards Car Rentals"
-        message = (
-            f"Hello {booking.customer.username},\n\n"
-            f"Thank you for your payment! Your transaction has been processed successfully.\n\n"
-            f"Payment details:\n"
-            f"- Booking ID: #{booking.id}\n"
-            f"- Transaction ID: {transaction_id}\n"
-            f"- Amount Paid: ₹{booking.total_price:.2f}\n"
-            f"- Car: {booking.car.brand} {booking.car.model} ({booking.car.year})\n"
-            f"- Pick-up Time: {booking.start_date.strftime('%Y-%m-%d %H:%M')}\n"
-            f"- Return Time: {booking.end_date.strftime('%Y-%m-%d %H:%M')}\n\n"
-            f"Your rental is now fully active. Enjoy your ride!\n\n"
-            f"Best regards,\n"
-            f"Web Wizards Car Rentals Team"
-        )
+        # Send confirmation email to customer
+        if payment_method == 'Pay on Visit':
+            subject = f"Booking Confirmation (Pay on Visit): Booking #{booking.id} - Web Wizards Car Rentals"
+            message = (
+                f"Hello {booking.customer.username},\n\n"
+                f"Your booking has been confirmed! You have opted to pay on visit (upon vehicle pickup).\n\n"
+                f"Booking details:\n"
+                f"- Booking ID: #{booking.id}\n"
+                f"- Payment Method: Pay on Visit\n"
+                f"- Reference ID: {transaction_id}\n"
+                f"- Amount Due: ₹{booking.total_price:.2f}\n"
+                f"- Car: {booking.car.brand} {booking.car.model} ({booking.car.year})\n"
+                f"- Pick-up Time: {booking.start_date.strftime('%Y-%m-%d %H:%M')}\n"
+                f"- Return Time: {booking.end_date.strftime('%Y-%m-%d %H:%M')}\n\n"
+                f"Please make the payment of ₹{booking.total_price:.2f} at the time of your pickup/visit.\n"
+                f"Your rental is now fully active. Enjoy your ride!\n\n"
+                f"Best regards,\n"
+                f"Web Wizards Car Rentals Team"
+            )
+        else:
+            subject = f"Payment Confirmation: Booking #{booking.id} - Web Wizards Car Rentals"
+            message = (
+                f"Hello {booking.customer.username},\n\n"
+                f"Thank you for your payment! Your transaction has been processed successfully.\n\n"
+                f"Payment details:\n"
+                f"- Booking ID: #{booking.id}\n"
+                f"- Transaction ID: {transaction_id}\n"
+                f"- Amount Paid: ₹{booking.total_price:.2f}\n"
+                f"- Car: {booking.car.brand} {booking.car.model} ({booking.car.year})\n"
+                f"- Pick-up Time: {booking.start_date.strftime('%Y-%m-%d %H:%M')}\n"
+                f"- Return Time: {booking.end_date.strftime('%Y-%m-%d %H:%M')}\n\n"
+                f"Your rental is now fully active. Enjoy your ride!\n\n"
+                f"Best regards,\n"
+                f"Web Wizards Car Rentals Team"
+            )
         recipient_list = [booking.customer.email]
         try:
             send_mail(
@@ -644,7 +667,10 @@ def payment_submit(request, booking_id):
         except Exception:
             pass
 
-        messages.success(request, f"Payment successful! Transaction ID: {transaction_id}")
+        if payment_method == 'Pay on Visit':
+            messages.success(request, f"Booking completed! You will pay ₹{booking.total_price:.2f} on visit. Reference ID: {transaction_id}")
+        else:
+            messages.success(request, f"Payment successful! Transaction ID: {transaction_id}")
         return redirect('dashboard')
 
     return redirect('payment_checkout', booking_id=booking_id)
