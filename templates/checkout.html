@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}Checkout - Web Wizards Car Rentals{% endblock %}
 
@@ -112,11 +113,17 @@
                     <div style="display: flex; flex-direction: column; align-items: center; gap: 20px; background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-color); border-radius: 12px; padding: 25px; margin-bottom: 25px;">
                         <span style="font-weight: 700; font-size: 1rem; color: var(--text-main);">Scan QR to Pay</span>
                         
-                        <!-- Mock QR Code with Premium Glassmorphism styling -->
+                        <!-- QR Code Display Container -->
                         <div style="position: relative; background: white; padding: 15px; border-radius: 10px; width: 160px; height: 160px; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 24px rgba(0,0,0,0.3);">
-                            <svg width="130" height="130" viewBox="0 0 29 29" style="shape-rendering: crispEdges;">
+                            <!-- Custom QR code image -->
+                            <img src="{% static 'images/upi_qr.png' %}" id="custom-qr-img" style="width: 130px; height: 130px; object-fit: contain; display: block;" onerror="this.style.display='none'; document.getElementById('mock-qr-svg').style.display='block';">
+                            
+                            <!-- Mock QR Code SVG fallback -->
+                            <svg id="mock-qr-svg" width="130" height="130" viewBox="0 0 29 29" style="shape-rendering: crispEdges; display: none;">
                                 <path fill="#000000" d="M0 0h7v7H0zm1 1v5h5V1zm21-1h7v7h-7zm1 1v5h5V1zM0 22h7v7H0zm1 1v5h5V23zm13-14h1v1h-1zm1 1h1v1h-1zm-2 2h3v1h-3zm1 2h1v3h-1zm-4-7h1v2h-1zm1 4h2v1h-2zm-2-2h1v1h-1zm1 3h1v1h-1zm5-7h3v1h-3zm-1 3h1v2h-1zm2 1h1v1h-1zm-3 4h1v1h-1zm1 1h2v1h-2zm3-3h1v1h-1zm-1 3h1v1h-1zm-5-14h1v1h-1zm-3 2h2v1h-2zm3 1h1v1h-1zm-1 2h1v1h-1zm-3-1h1v1h-1zm4 3h1v1h-1zm-9 6h1v1h-1zm1 1h1v2h-1zm2-2h1v1h-1zm-2 4h3v1h-3zm5-3h1v2h-1zm1 1h1v1h-1zm-2 2h3v1h-3zm8-4h1v1h-1zm-2 1h1v1h-1zm1 2h1v2h-1zm-3-1h1v1h-1zm2 3h1v1h-1zm-9 4h1v1h-1zm1-2h1v1h-1zm2 1h1v2h-1zm-2 2h3v1h-3zm5-3h1v1h-1zm1 2h1v1h-1zm-2 1h2v1h-2zm1-5h1v1h-1zm4 1h1v2h-1zm-3 2h2v1h-2zm3 1h1v1h-1zm-5-14h1v2h-1zm1 4h1v1h-1zm-2-2h1v1h-1zm1 3h1v1h-1zm2-3h1v1h-1zm3 1h1v1h-1zm-2 2h1v1h-1zm2 1h1v1h-1zm-12 5h1v1h-1zm1 2h1v1h-1zm-2-1h1v1h-1zm1 2h1v1h-1zm5-8h1v1h-1zm1 2h1v1h-1zm-2 1h2v1h-2zm3-3h1v2h-1zm-2 3h1v1h-1zm1 1h1v1h-1zM9 1h1v2H9zm1 3h1v1h-1zm-2-2h1v1H8zm1 3h1v1H9zm10-4h1v1h-1zm1 2h1v1h-1zm-2-1h1v1h-1zm1 2h1v1h-1zm2-3h1v1h-1zm1 2h1v1h-1zm-2-1h1v1h-1zm1 2h1v1h-1zM9 9h1v1H9zm1 1h1v2h-1zm-2-1h1v1H8zm1 3h1v1H9zm5-5h1v1h-1zm1 2h2v1h-2zm-2-1h1v1h-1zm1 3h1v1h-1zm5-5h1v1h-1zm1 2h1v2h-1zm-2-1h1v1h-1zm1 3h1v1h-1zm2-3h1v1h-1zm1 2h1v1h-1zm-2-1h1v1h-1zm1 2h1v1h-1zM9 17h1v1H9zm1 1h1v2h-1zm-2-1h1v1H8zm1 3h1v1H9zm5-5h1v1h-1zm1 2h2v1h-2zm-2-1h1v1h-1zm1 3h1v1h-1zm5-5h1v1h-1zm1 2h1v2h-1zm-2-1h1v1h-1zm1 3h1v1h-1zm2-3h1v1h-1zm1 2h1v1h-1zm-2-1h1v1h-1zm1 2h1v1h-1zM2 9h3v3H2zm1 1v1h1v-1zm11-1h1v1h-1zm1 1h1v2h-1zm-2-1h1v1h-1zm1 3h1v1h-1zm5-5h1v1h-1zm1 2h1v2h-1zm-2-1h1v1h-1zm1 3h1v1h-1zm2-3h1v1h-1zm1 2h1v1h-1zm-2-1h1v1h-1zm1 2h1v1h-1zM2 17h3v3H2zm1 1v1h1v-1z"/>
                             </svg>
+                            
+                            <!-- Mini app overlay icon in the center -->
                             <div style="position: absolute; background: var(--bg-card); padding: 5px; border-radius: 50%; box-shadow: 0 2px 6px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; width: 32px; height: 32px;">
                                 <i class="fa-solid fa-qrcode" style="color: var(--success); font-size: 1rem;"></i>
                             </div>
