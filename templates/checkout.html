@@ -19,18 +19,26 @@
                 <!-- Payment Method Selection -->
                 <div class="form-group" style="margin-bottom: 25px;">
                     <label style="display: block; margin-bottom: 12px; font-size: 0.9rem; font-weight: 500; color: var(--text-muted);">Choose Payment Method</label>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                        <label class="glass-card" id="pay-card-label" style="padding: 15px; display: flex; align-items: center; gap: 10px; cursor: pointer; border-color: var(--primary); background: rgba(79, 70, 229, 0.08); margin-bottom: 0;">
-                            <input type="radio" name="payment_method" value="Credit Card" checked style="cursor: pointer;" onchange="togglePaymentMethod('card')">
-                            <span style="font-weight: 600; font-size: 0.9rem; color: var(--text-main);">
-                                <i class="fa-solid fa-credit-card" style="color: var(--primary); margin-right: 5px;"></i> Pay with Card
-                            </span>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 12px;">
+                        <label class="glass-card" id="pay-card-label" style="padding: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; cursor: pointer; border-color: var(--primary); background: rgba(79, 70, 229, 0.08); margin-bottom: 0; text-align: center; transition: all 0.3s ease;">
+                            <input type="radio" name="payment_method" value="Credit Card" checked style="display: none;" onchange="togglePaymentMethod('card')">
+                            <i class="fa-solid fa-credit-card" style="font-size: 1.3rem; color: var(--primary);"></i>
+                            <span style="font-weight: 600; font-size: 0.8rem; color: var(--text-main);">Card</span>
                         </label>
-                        <label class="glass-card" id="pay-visit-label" style="padding: 15px; display: flex; align-items: center; gap: 10px; cursor: pointer; border-color: var(--border-color); background: transparent; margin-bottom: 0;">
-                            <input type="radio" name="payment_method" value="Pay on Visit" style="cursor: pointer;" onchange="togglePaymentMethod('visit')">
-                            <span style="font-weight: 600; font-size: 0.9rem; color: var(--text-main);">
-                                <i class="fa-solid fa-handshake" style="color: var(--accent); margin-right: 5px;"></i> Pay on Visit
-                            </span>
+                        <label class="glass-card" id="pay-upi-label" style="padding: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; cursor: pointer; border-color: var(--border-color); background: transparent; margin-bottom: 0; text-align: center; transition: all 0.3s ease;">
+                            <input type="radio" name="payment_method" value="UPI" style="display: none;" onchange="togglePaymentMethod('upi')">
+                            <i class="fa-solid fa-qrcode" style="font-size: 1.3rem; color: var(--success);"></i>
+                            <span style="font-weight: 600; font-size: 0.8rem; color: var(--text-main);">UPI</span>
+                        </label>
+                        <label class="glass-card" id="pay-netbanking-label" style="padding: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; cursor: pointer; border-color: var(--border-color); background: transparent; margin-bottom: 0; text-align: center; transition: all 0.3s ease;">
+                            <input type="radio" name="payment_method" value="Net Banking" style="display: none;" onchange="togglePaymentMethod('netbanking')">
+                            <i class="fa-solid fa-building-columns" style="font-size: 1.3rem; color: var(--info, #0ea5e9);"></i>
+                            <span style="font-weight: 600; font-size: 0.8rem; color: var(--text-main);">Net Banking</span>
+                        </label>
+                        <label class="glass-card" id="pay-visit-label" style="padding: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; cursor: pointer; border-color: var(--border-color); background: transparent; margin-bottom: 0; text-align: center; transition: all 0.3s ease;">
+                            <input type="radio" name="payment_method" value="Pay on Visit" style="display: none;" onchange="togglePaymentMethod('visit')">
+                            <i class="fa-solid fa-handshake" style="font-size: 1.3rem; color: var(--accent);"></i>
+                            <span style="font-weight: 600; font-size: 0.8rem; color: var(--text-main);">Pay on Visit</span>
                         </label>
                     </div>
                 </div>
@@ -95,6 +103,76 @@
                         <div class="form-group">
                             <label for="cvv">CVV Code</label>
                             <input type="password" id="cvv" name="cvv" class="form-control" placeholder="123" maxlength="3" required onfocus="flipCard(true)" onblur="flipCard(false)" oninput="syncCardFields()">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- UPI Payment Section -->
+                <div id="upi-payment-details" style="display: none; margin-top: 20px;">
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 20px; background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-color); border-radius: 12px; padding: 25px; margin-bottom: 25px;">
+                        <span style="font-weight: 700; font-size: 1rem; color: var(--text-main);">Scan QR to Pay</span>
+                        
+                        <!-- Mock QR Code with Premium Glassmorphism styling -->
+                        <div style="position: relative; background: white; padding: 15px; border-radius: 10px; width: 160px; height: 160px; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 24px rgba(0,0,0,0.3);">
+                            <svg width="130" height="130" viewBox="0 0 29 29" style="shape-rendering: crispEdges;">
+                                <path fill="#000000" d="M0 0h7v7H0zm1 1v5h5V1zm21-1h7v7h-7zm1 1v5h5V1zM0 22h7v7H0zm1 1v5h5V23zm13-14h1v1h-1zm1 1h1v1h-1zm-2 2h3v1h-3zm1 2h1v3h-1zm-4-7h1v2h-1zm1 4h2v1h-2zm-2-2h1v1h-1zm1 3h1v1h-1zm5-7h3v1h-3zm-1 3h1v2h-1zm2 1h1v1h-1zm-3 4h1v1h-1zm1 1h2v1h-2zm3-3h1v1h-1zm-1 3h1v1h-1zm-5-14h1v1h-1zm-3 2h2v1h-2zm3 1h1v1h-1zm-1 2h1v1h-1zm-3-1h1v1h-1zm4 3h1v1h-1zm-9 6h1v1h-1zm1 1h1v2h-1zm2-2h1v1h-1zm-2 4h3v1h-3zm5-3h1v2h-1zm1 1h1v1h-1zm-2 2h3v1h-3zm8-4h1v1h-1zm-2 1h1v1h-1zm1 2h1v2h-1zm-3-1h1v1h-1zm2 3h1v1h-1zm-9 4h1v1h-1zm1-2h1v1h-1zm2 1h1v2h-1zm-2 2h3v1h-3zm5-3h1v1h-1zm1 2h1v1h-1zm-2 1h2v1h-2zm1-5h1v1h-1zm4 1h1v2h-1zm-3 2h2v1h-2zm3 1h1v1h-1zm-5-14h1v2h-1zm1 4h1v1h-1zm-2-2h1v1h-1zm1 3h1v1h-1zm2-3h1v1h-1zm3 1h1v1h-1zm-2 2h1v1h-1zm2 1h1v1h-1zm-12 5h1v1h-1zm1 2h1v1h-1zm-2-1h1v1h-1zm1 2h1v1h-1zm5-8h1v1h-1zm1 2h1v1h-1zm-2 1h2v1h-2zm3-3h1v2h-1zm-2 3h1v1h-1zm1 1h1v1h-1zM9 1h1v2H9zm1 3h1v1h-1zm-2-2h1v1H8zm1 3h1v1H9zm10-4h1v1h-1zm1 2h1v1h-1zm-2-1h1v1h-1zm1 2h1v1h-1zm2-3h1v1h-1zm1 2h1v1h-1zm-2-1h1v1h-1zm1 2h1v1h-1zM9 9h1v1H9zm1 1h1v2h-1zm-2-1h1v1H8zm1 3h1v1H9zm5-5h1v1h-1zm1 2h2v1h-2zm-2-1h1v1h-1zm1 3h1v1h-1zm5-5h1v1h-1zm1 2h1v2h-1zm-2-1h1v1h-1zm1 3h1v1h-1zm2-3h1v1h-1zm1 2h1v1h-1zm-2-1h1v1h-1zm1 2h1v1h-1zM9 17h1v1H9zm1 1h1v2h-1zm-2-1h1v1H8zm1 3h1v1H9zm5-5h1v1h-1zm1 2h2v1h-2zm-2-1h1v1h-1zm1 3h1v1h-1zm5-5h1v1h-1zm1 2h1v2h-1zm-2-1h1v1h-1zm1 3h1v1h-1zm2-3h1v1h-1zm1 2h1v1h-1zm-2-1h1v1h-1zm1 2h1v1h-1zM2 9h3v3H2zm1 1v1h1v-1zm11-1h1v1h-1zm1 1h1v2h-1zm-2-1h1v1h-1zm1 3h1v1h-1zm5-5h1v1h-1zm1 2h1v2h-1zm-2-1h1v1h-1zm1 3h1v1h-1zm2-3h1v1h-1zm1 2h1v1h-1zm-2-1h1v1h-1zm1 2h1v1h-1zM2 17h3v3H2zm1 1v1h1v-1z"/>
+                            </svg>
+                            <div style="position: absolute; background: var(--bg-card); padding: 5px; border-radius: 50%; box-shadow: 0 2px 6px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; width: 32px; height: 32px;">
+                                <i class="fa-solid fa-qrcode" style="color: var(--success); font-size: 1rem;"></i>
+                            </div>
+                        </div>
+                        
+                        <div style="text-align: center; color: var(--text-muted); font-size: 0.8rem; line-height: 1.5;">
+                            Supported Apps: <br>
+                            <span style="font-weight: 700; color: var(--text-main);">GPay • PhonePe • Paytm • BHIM</span>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="upi_id">Enter UPI ID</label>
+                        <div style="position:relative;">
+                            <input type="text" id="upi_id" name="upi_id" class="form-control" placeholder="e.g. username@okaxis" oninput="validateUPI(this)">
+                            <span id="upi-verify-badge" style="position:absolute; right:15px; top:12px; font-size:0.75rem; font-weight:700; color:var(--text-muted); display:flex; align-items:center; gap:5px;">
+                                <i class="fa-solid fa-circle-notch fa-spin" style="display:none; color: var(--primary);" id="upi-spinner"></i>
+                                <span id="upi-status-text">Enter ID</span>
+                            </span>
+                        </div>
+                        <p style="font-size:0.75rem; color:var(--text-muted); margin-top:5px; margin-left:2px;">Format should be username@bankname</p>
+                    </div>
+                </div>
+
+                <!-- Net Banking Payment Section -->
+                <div id="netbanking-payment-details" style="display: none; margin-top: 20px; margin-bottom: 25px;">
+                    <label style="display: block; margin-bottom: 12px; font-size: 0.9rem; font-weight: 500; color: var(--text-muted);">Select Your Bank</label>
+                    
+                    <!-- Hidden bank input to capture the selected value -->
+                    <input type="hidden" id="selected_bank" name="selected_bank">
+                    
+                    <!-- Bank Selection Grid -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;" id="bank-selection-grid">
+                        <div class="glass-card bank-option" data-bank="SBI" style="padding: 12px 15px; display: flex; align-items: center; gap: 10px; cursor: pointer; border-color: var(--border-color); background: transparent; transition: all 0.3s;" onclick="selectBank(this)">
+                            <div style="width: 24px; height: 24px; background: #00a5ec; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 900; font-size: 0.65rem;">SBI</div>
+                            <span style="font-weight: 600; font-size: 0.85rem; color: var(--text-main);">State Bank of India</span>
+                        </div>
+                        <div class="glass-card bank-option" data-bank="HDFC" style="padding: 12px 15px; display: flex; align-items: center; gap: 10px; cursor: pointer; border-color: var(--border-color); background: transparent; transition: all 0.3s;" onclick="selectBank(this)">
+                            <div style="width: 24px; height: 24px; background: #003366; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: white; font-weight: 900; font-size: 0.65rem;">HDFC</div>
+                            <span style="font-weight: 600; font-size: 0.85rem; color: var(--text-main);">HDFC Bank</span>
+                        </div>
+                        <div class="glass-card bank-option" data-bank="ICICI" style="padding: 12px 15px; display: flex; align-items: center; gap: 10px; cursor: pointer; border-color: var(--border-color); background: transparent; transition: all 0.3s;" onclick="selectBank(this)">
+                            <div style="width: 24px; height: 24px; background: #ff9933; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: white; font-weight: 900; font-size: 0.65rem;">ICICI</div>
+                            <span style="font-weight: 600; font-size: 0.85rem; color: var(--text-main);">ICICI Bank</span>
+                        </div>
+                        <div class="glass-card bank-option" data-bank="Axis" style="padding: 12px 15px; display: flex; align-items: center; gap: 10px; cursor: pointer; border-color: var(--border-color); background: transparent; transition: all 0.3s;" onclick="selectBank(this)">
+                            <div style="width: 24px; height: 24px; background: #97144d; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: white; font-weight: 900; font-size: 0.65rem;">AXIS</div>
+                            <span style="font-weight: 600; font-size: 0.85rem; color: var(--text-main);">Axis Bank</span>
+                        </div>
+                        <div class="glass-card bank-option" data-bank="Kotak" style="padding: 12px 15px; display: flex; align-items: center; gap: 10px; cursor: pointer; border-color: var(--border-color); background: transparent; transition: all 0.3s;" onclick="selectBank(this)">
+                            <div style="width: 24px; height: 24px; background: #ff0000; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: white; font-weight: 900; font-size: 0.65rem;">KMB</div>
+                            <span style="font-weight: 600; font-size: 0.85rem; color: var(--text-main);">Kotak Mahindra</span>
+                        </div>
+                        <div class="glass-card bank-option" data-bank="PNB" style="padding: 12px 15px; display: flex; align-items: center; gap: 10px; cursor: pointer; border-color: var(--border-color); background: transparent; transition: all 0.3s;" onclick="selectBank(this)">
+                            <div style="width: 24px; height: 24px; background: #a32420; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: white; font-weight: 900; font-size: 0.65rem;">PNB</div>
+                            <span style="font-weight: 600; font-size: 0.85rem; color: var(--text-main);">Punjab National Bank</span>
                         </div>
                     </div>
                 </div>
@@ -217,14 +295,42 @@
 
     function togglePaymentMethod(method) {
         const cardDetails = document.getElementById('card-payment-details');
+        const upiDetails = document.getElementById('upi-payment-details');
+        const netbankingDetails = document.getElementById('netbanking-payment-details');
+        
         const cardholder = document.getElementById('cardholder');
         const cardNumber = document.getElementById('card_number');
         const expiry = document.getElementById('expiry');
         const cvv = document.getElementById('cvv');
+        const upiId = document.getElementById('upi_id');
+        const selectedBank = document.getElementById('selected_bank');
         const submitBtn = document.querySelector('button[type="submit"]');
         
         const cardLabel = document.getElementById('pay-card-label');
+        const upiLabel = document.getElementById('pay-upi-label');
+        const netbankingLabel = document.getElementById('pay-netbanking-label');
         const visitLabel = document.getElementById('pay-visit-label');
+
+        // Reset inputs requirement
+        cardholder.removeAttribute('required');
+        cardNumber.removeAttribute('required');
+        expiry.removeAttribute('required');
+        cvv.removeAttribute('required');
+        upiId.removeAttribute('required');
+        selectedBank.removeAttribute('required');
+        
+        // Reset labels styles
+        [cardLabel, upiLabel, netbankingLabel, visitLabel].forEach(label => {
+            if (label) {
+                label.style.borderColor = 'var(--border-color)';
+                label.style.background = 'transparent';
+            }
+        });
+
+        // Hide all details panels
+        cardDetails.style.display = 'none';
+        if (upiDetails) upiDetails.style.display = 'none';
+        if (netbankingDetails) netbankingDetails.style.display = 'none';
 
         if (method === 'card') {
             cardDetails.style.display = 'block';
@@ -236,20 +342,24 @@
             cardLabel.style.borderColor = 'var(--primary)';
             cardLabel.style.background = 'rgba(79, 70, 229, 0.08)';
             
-            visitLabel.style.borderColor = 'var(--border-color)';
-            visitLabel.style.background = 'transparent';
-            
             submitBtn.innerHTML = '<i class="fa-solid fa-lock"></i> Authorize & Pay ₹{{ booking.total_price|floatformat:2 }}';
+        } else if (method === 'upi') {
+            upiDetails.style.display = 'block';
+            upiId.setAttribute('required', 'required');
+            
+            upiLabel.style.borderColor = 'var(--success)';
+            upiLabel.style.background = 'rgba(16, 185, 129, 0.08)';
+            
+            submitBtn.innerHTML = '<i class="fa-solid fa-qrcode"></i> Complete UPI Payment ₹{{ booking.total_price|floatformat:2 }}';
+        } else if (method === 'netbanking') {
+            netbankingDetails.style.display = 'block';
+            selectedBank.setAttribute('required', 'required');
+            
+            netbankingLabel.style.borderColor = 'var(--info, #0ea5e9)';
+            netbankingLabel.style.background = 'rgba(14, 165, 233, 0.08)';
+            
+            submitBtn.innerHTML = '<i class="fa-solid fa-building-columns"></i> Pay via Net Banking ₹{{ booking.total_price|floatformat:2 }}';
         } else {
-            cardDetails.style.display = 'none';
-            cardholder.removeAttribute('required');
-            cardNumber.removeAttribute('required');
-            expiry.removeAttribute('required');
-            cvv.removeAttribute('required');
-            
-            cardLabel.style.borderColor = 'var(--border-color)';
-            cardLabel.style.background = 'transparent';
-            
             visitLabel.style.borderColor = 'var(--accent)';
             visitLabel.style.background = 'rgba(236, 72, 153, 0.08)';
             
@@ -257,11 +367,66 @@
         }
     }
 
+    function selectBank(element) {
+        // Deselect all bank options
+        const bankOptions = document.querySelectorAll('.bank-option');
+        bankOptions.forEach(opt => {
+            opt.style.borderColor = 'var(--border-color)';
+            opt.style.background = 'transparent';
+        });
+        
+        // Select this option
+        element.style.borderColor = 'var(--info, #0ea5e9)';
+        element.style.background = 'rgba(14, 165, 233, 0.04)';
+        
+        // Set hidden value
+        const bankName = element.getAttribute('data-bank');
+        document.getElementById('selected_bank').value = bankName;
+    }
+
+    let upiTimeout;
+    function validateUPI(input) {
+        const value = input.value;
+        const spinner = document.getElementById('upi-spinner');
+        const statusText = document.getElementById('upi-status-text');
+        const badge = document.getElementById('upi-verify-badge');
+        
+        clearTimeout(upiTimeout);
+        
+        if (!value) {
+            spinner.style.display = 'none';
+            statusText.textContent = 'Enter ID';
+            badge.style.color = 'var(--text-muted)';
+            return;
+        }
+        
+        // Show scanning spinner
+        spinner.style.display = 'inline-block';
+        statusText.textContent = 'Verifying...';
+        badge.style.color = 'var(--warning, #f59e0b)';
+        
+        upiTimeout = setTimeout(() => {
+            spinner.style.display = 'none';
+            if (value.includes('@') && value.split('@')[1].length > 1) {
+                statusText.textContent = 'Verified ✓';
+                badge.style.color = 'var(--success)';
+            } else {
+                statusText.textContent = 'Invalid ID';
+                badge.style.color = 'var(--danger, #ef4444)';
+            }
+        }, 1200);
+    }
+
     // Call togglePaymentMethod on page load to ensure initial state matches selection
     document.addEventListener('DOMContentLoaded', function() {
-        const checkedMethod = document.querySelector('input[name="payment_method"]:checked').value;
+        const checkedMethodElement = document.querySelector('input[name="payment_method"]:checked');
+        const checkedMethod = checkedMethodElement ? checkedMethodElement.value : 'Credit Card';
         if (checkedMethod === 'Pay on Visit') {
             togglePaymentMethod('visit');
+        } else if (checkedMethod === 'UPI') {
+            togglePaymentMethod('upi');
+        } else if (checkedMethod === 'Net Banking') {
+            togglePaymentMethod('netbanking');
         } else {
             togglePaymentMethod('card');
         }

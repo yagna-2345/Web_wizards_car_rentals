@@ -660,10 +660,13 @@ def payment_submit(request, booking_id):
     booking = get_object_or_404(Booking, id=booking_id, customer=request.user, status='APPROVED', payment_status='PENDING')
     
     if request.method == 'POST':
-        # Simulated payment completion
         payment_method = request.POST.get('payment_method', 'Credit Card')
         if payment_method == 'Pay on Visit':
             transaction_id = f"POV-{uuid.uuid4().hex[:8].upper()}"
+        elif payment_method == 'UPI':
+            transaction_id = f"UPI-{uuid.uuid4().hex[:8].upper()}"
+        elif payment_method == 'Net Banking':
+            transaction_id = f"NET-{uuid.uuid4().hex[:8].upper()}"
         else:
             transaction_id = f"TXN-{uuid.uuid4().hex[:8].upper()}"
         
@@ -680,7 +683,7 @@ def payment_submit(request, booking_id):
         damage_report = request.POST.get('damage_report')
         if damage_report:
             booking.damage_report = damage_report
-
+ 
         # Save base64 Digital Signature image
         signature_base64 = request.POST.get('signature_base64')
         if signature_base64 and signature_base64.startswith('data:image/png;base64,'):
@@ -701,11 +704,11 @@ def payment_submit(request, booking_id):
             amount=booking.total_price,
             payment_method=payment_method
         )
-
+ 
         # Update booking
         booking.payment_status = 'PAID'
         booking.save()
-
+ 
         # Send confirmation email to customer
         if payment_method == 'Pay on Visit':
             subject = f"Booking Confirmation (Pay on Visit): Booking #{booking.id} - Web Wizards Car Rentals"
@@ -732,6 +735,7 @@ def payment_submit(request, booking_id):
                 f"Thank you for your payment! Your transaction has been processed successfully.\n\n"
                 f"Payment details:\n"
                 f"- Booking ID: #{booking.id}\n"
+                f"- Payment Method: {payment_method}\n"
                 f"- Transaction ID: {transaction_id}\n"
                 f"- Amount Paid: ₹{booking.total_price:.2f}\n"
                 f"- Car: {booking.car.brand} {booking.car.model} ({booking.car.year})\n"
