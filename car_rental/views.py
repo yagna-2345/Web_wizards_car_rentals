@@ -698,11 +698,13 @@ def payment_submit(request, booking_id):
                 pass
         
         # Save payment details
+        payment_screenshot = request.FILES.get('payment_screenshot')
         Payment.objects.create(
             booking=booking,
             transaction_id=transaction_id,
             amount=booking.total_price,
-            payment_method=payment_method
+            payment_method=payment_method,
+            payment_screenshot=payment_screenshot
         )
  
         # Update booking

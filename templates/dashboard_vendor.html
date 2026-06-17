@@ -184,6 +184,11 @@
                                     <tr>
                                         <td style="font-family:monospace; font-weight:700; font-size:0.8rem; color:var(--primary);">
                                             {{ booking.payment.transaction_id|default:"TXN-DEMOPAY" }}
+                                            {% if booking.payment.payment_screenshot %}
+                                                <a href="{{ booking.payment.payment_screenshot.url }}" target="_blank" style="display:flex; align-items:center; gap:4px; font-size:0.72rem; color:var(--success); margin-top:4px; text-decoration:none; font-family:var(--font-main);" title="View payment screenshot proof">
+                                                    <i class="fa-solid fa-image"></i> View Receipt
+                                                </a>
+                                            {% endif %}
                                         </td>
                                         <td style="font-weight:600;">
                                             {{ booking.car.brand }} {{ booking.car.model }}

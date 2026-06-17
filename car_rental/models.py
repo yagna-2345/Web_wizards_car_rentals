@@ -119,6 +119,7 @@ class Payment(models.Model):
     transaction_id = models.CharField(max_length=100, unique=True)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     payment_method = models.CharField(max_length=50, default='Credit Card')
+    payment_screenshot = models.ImageField(upload_to='payment_screenshots/', blank=True, null=True)
     timestamp = models.DateTimeField(default=timezone.now)
 
     def __str__(self):

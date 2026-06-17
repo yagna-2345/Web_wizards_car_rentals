@@ -146,6 +146,12 @@
                         </div>
                         <p style="font-size:0.75rem; color:var(--text-muted); margin-top:5px; margin-left:2px;">Format should be username@bankname</p>
                     </div>
+                    
+                    <div class="form-group" style="margin-top: 15px;">
+                        <label for="payment_screenshot">Upload Payment Screenshot <span style="color:var(--danger);">*</span></label>
+                        <input type="file" id="payment_screenshot" name="payment_screenshot" class="form-control" accept="image/*" style="padding: 7px 10px;">
+                        <p style="font-size:0.75rem; color:var(--text-muted); margin-top:5px; margin-left:2px;">Please upload a screenshot of your payment confirmation screen.</p>
+                    </div>
                 </div>
 
                 <!-- Net Banking Payment Section -->
@@ -310,6 +316,7 @@
         const expiry = document.getElementById('expiry');
         const cvv = document.getElementById('cvv');
         const upiId = document.getElementById('upi_id');
+        const paymentScreenshot = document.getElementById('payment_screenshot');
         const selectedBank = document.getElementById('selected_bank');
         const submitBtn = document.querySelector('button[type="submit"]');
         
@@ -324,6 +331,7 @@
         expiry.removeAttribute('required');
         cvv.removeAttribute('required');
         upiId.removeAttribute('required');
+        if (paymentScreenshot) paymentScreenshot.removeAttribute('required');
         selectedBank.removeAttribute('required');
         
         // Reset labels styles
@@ -353,6 +361,7 @@
         } else if (method === 'upi') {
             upiDetails.style.display = 'block';
             upiId.setAttribute('required', 'required');
+            if (paymentScreenshot) paymentScreenshot.setAttribute('required', 'required');
             
             upiLabel.style.borderColor = 'var(--success)';
             upiLabel.style.background = 'rgba(16, 185, 129, 0.08)';
